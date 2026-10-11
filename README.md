@@ -17,7 +17,7 @@ npm run dev        # http://localhost:5173
 |---|---|
 | WASD / arrows | Move (Shift to sprint, Space to jump) |
 | Mouse | Look (click the game to capture the pointer) |
-| E | Interact: expedition gate, outfitter, return sign |
+| E | Interact: expedition ferry, outfitter, buggy, return sign |
 | Q | Drop bait (premium bait is used first) |
 | Left click | Throw net |
 | Tab | Field journal |
@@ -26,12 +26,12 @@ npm run dev        # http://localhost:5173
 
 ### Loop
 
-1. **Zoo hub.** Eight empty exhibit plots fill in as you capture each species. Visitors pay for tickets around the clock, including while you're away (capped at 8 hours).
-2. **Expedition gate.** Pick a biome. The Arid Canyon needs the Off-road Buggy.
+1. **Zoo hub.** A hillside zoo modelled loosely on Taronga Zoo Sydney: you arrive at the Main Entrance on the hilltop, and the paths wind down past the precincts to the ferry wharf on the harbour, with the Sky Safari overhead and the city across the water. Each expedition biome is exhibited in its own precinct (Temperate Forest → Rainforest Trail, Arid Canyon → African Savannah), and its species' plots fill in as you capture them. Visitors pay for tickets around the clock, including while you're away (capped at 8 hours).
+2. **Expedition ferry.** Board it at the wharf at the bottom of the hill and pick a biome. The Arid Canyon needs the Off-road Buggy.
 3. **Track.** Follow footprints, and listen for spatialised calls. The sound log tells you roughly where each came from. Creatures spot you inside their detection radius, which is larger when you sprint and largest for the big-eared fennec fox.
 4. **Lure.** Drop bait and back off. Creatures nearby walk over, eat and stay calm, and a calm creature won't flee.
 5. **Net.** Capture chance is `base(rarity) × net multiplier × (baited ? 1.5 : 1)`, capped at 95%. The journal shows your current odds.
-6. **Drive.** Once you own the Off-road Buggy, it's parked by the expedition gate and wherever you arrive in a biome. Press E to hop in. It's much faster than walking, but the engine scares creatures from twice as far, so park and walk the last stretch.
+6. **Drive.** Once you own the Off-road Buggy, it's parked by the Main Entrance and wherever you arrive in a biome. Press E to hop in. It's much faster than walking, but the engine scares creatures from twice as far, so park and walk the last stretch.
 7. **Legendaries.** Each biome has one in a lair at the far end. Netting it starts a mini-game: hold to wind in, then release while the struggle marker is in the green zone. Better nets widen the zone. Three misses and it breaks free.
 
 **Visitors pay to get in.** Once your zoo has an animal, about 4 visitors a minute buy a ticket at the booth by the entrance. The ticket price is the sum over every animal: common +$0.50, uncommon +$1.25, rare +$3, legendary +$10, so more and rarer animals mean pricier tickets. Your income is visitors × ticket price, and it keeps coming while you're away. Exhibits hold any number of animals. Every extra catch of a species joins its enclosure and adds that species' income. Creatures that can fly (the barn owl) live in a roofed aviary.
@@ -56,6 +56,7 @@ src/
     state/store.ts persisted save (zustand + localStorage) and session UI state
     systems/       economy, capture odds, hunt actions, input, audio, world runtime, asset index
   scenes/          ZooHub, Biome (data-driven from biomes.ts)
+    hub/           zoo layout (precincts, paths, terrain), harbour + skyline, Sky Safari
   components/      Player (FPS controller), Creature (AI), CreatureModel (GLB or placeholder),
                    Props, Ground, Sign, CaptureMiniGame
   ui/              HUD, radar, panels (pause, gate, shop), journal

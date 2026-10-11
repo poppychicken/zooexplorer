@@ -15,6 +15,11 @@ export const player = {
   teleport: (_x: number, _z: number, _yaw?: number) => {},
 }
 
+/** Ground height lookup for the current scene; the hillside zoo hub replaces the flat default. */
+export const terrain = {
+  height: (_x: number, _z: number): number => 0,
+}
+
 /** The drivable buggy in the current scene, if there is one. */
 export const vehicle = {
   /** Where the driver sits, in world space. */

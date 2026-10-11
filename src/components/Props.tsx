@@ -22,6 +22,8 @@ export interface PlacedProp {
   z: number
   scale: number
   rot: number
+  /** Ground height under the prop (defaults to 0 for flat scenes). */
+  y?: number
   /** Optional per-instance tint jitter. */
   tint?: number
 }
@@ -124,7 +126,7 @@ function PartInstances({ part, props }: { part: Part; props: PlacedProp[] }) {
     const base = new Color(part.color)
     props.forEach((p, i) => {
       q.setFromAxisAngle(new Vector3(0, 1, 0), p.rot)
-      m4.compose(new Vector3(p.x, 0, p.z), q, new Vector3(p.scale, p.scale, p.scale)).multiply(local)
+      m4.compose(new Vector3(p.x, p.y ?? 0, p.z), q, new Vector3(p.scale, p.scale, p.scale)).multiply(local)
       mesh.setMatrixAt(i, m4)
       const t = p.tint ?? 0
       mesh.setColorAt(i, tmpColor.copy(base).offsetHSL(t * 0.03, t * 0.05, t * 0.06))
@@ -157,7 +159,7 @@ export function PropField({ props, colliders: withColliders = true }: { props: P
         const c = PROP_COLLIDER[p.kind]
         if (!c) return []
         const hh = c.halfHeight * p.scale
-        return [<CylinderCollider key={i} args={[hh, c.radius * p.scale]} position={[p.x, hh, p.z]} />]
+        return [<CylinderCollider key={i} args={[hh, c.radius * p.scale]} position={[p.x, (p.y ?? 0) + hh, p.z]} />]
       }),
     [props, withColliders],
   )

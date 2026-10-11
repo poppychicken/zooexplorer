@@ -72,14 +72,15 @@ export function App() {
       <Canvas
         shadows
         dpr={[1, 1.75]}
-        camera={{ fov: 70, near: 0.1, far: 400 }}
+        camera={{ fov: 70, near: 0.1, far: 800 }}
         onPointerDown={() => {
           unlockAudio()
           if (!useSession.getState().modal) requestLock()
         }}
       >
         <Suspense fallback={null}>
-          <Physics gravity={[0, -20, 0]} timeStep="vary">
+          {/* Fixed steps: a long frame (slow device, returning to the tab) is split into small steps instead of one big one that could tunnel through the hillside. */}
+          <Physics gravity={[0, -20, 0]} timeStep={1 / 60}>
             {location.kind === 'hub' ? <ZooHub key={visit} /> : <Biome key={visit} biomeId={location.biome} />}
           </Physics>
         </Suspense>

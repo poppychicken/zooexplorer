@@ -144,6 +144,20 @@ Notes:
 - **Check the current model names and versions on replicate.com before using them.** Replicate's model catalogue changes often.
 - Make the script **idempotent**: skip creatures that already have assets unless you pass `--force`.
 
+## 5a. Zoo layout and future biomes
+
+The hub is laid out like Taronga Zoo Sydney (`src/scenes/hub/layout.ts`): Main Entrance at the top of the hill, ferry wharf (expeditions) on the harbour at the bottom, Sky Safari between them. Each expedition biome is exhibited in one precinct:
+
+| Precinct | Biome | Status |
+|---|---|---|
+| Rainforest Trail | Temperate Forest | Open |
+| African Savannah | Arid Canyon | Open |
+| Nura Diya Australia | Outback Scrub (proposed) | Under construction |
+| Tiger Trek | Asian Jungle (proposed) | Under construction |
+| Great Southern Oceans | Southern Ocean Coast (proposed) | Under construction |
+
+Adding a biome = a `BIOMES` entry, four `CREATURES`, and setting `biome` on its precinct in `PRECINCTS`; the plots, signs and visitor routes follow automatically. Proposed rosters are in the session notes and the PR that introduced this layout.
+
 ## 6. Ideas for after the slice
 
 - More biomes: wetlands, tundra, rainforest canopy, deep cave, coral reef (needs a submarine).

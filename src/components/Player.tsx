@@ -4,7 +4,7 @@ import { CapsuleCollider, RigidBody, interactionGroups, useRapier, type RapierRi
 import { Euler, Vector3 } from 'three'
 import { consumeLook, isDown, onKeyPress } from '../game/systems/input'
 import { findFocus } from '../game/systems/interact'
-import { player, vehicle } from '../game/systems/world'
+import { player, terrain, vehicle } from '../game/systems/world'
 import { useGame, useSession } from '../game/state/store'
 
 const WALK = 5
@@ -29,7 +29,7 @@ export function Player({ spawn, yaw = 0 }: { spawn: [number, number, number]; ya
     player.pitch = 0
     consumeLook()
     player.teleport = (x, z, newYaw) => {
-      body.current?.setTranslation({ x, y: 1.2, z }, true)
+      body.current?.setTranslation({ x, y: terrain.height(x, z) + 1.2, z }, true)
       if (newYaw !== undefined) player.yaw = newYaw
     }
   }, [yaw])
@@ -110,6 +110,12 @@ export function Player({ spawn, yaw = 0 }: { spawn: [number, number, number]; ya
 
     const p = rb.translation()
     if (p.y < -20) rb.setTranslation({ x: spawn[0], y: spawn[1] + 2, z: spawn[2] }, true)
+    // Safety net: if we ever slip under the ground, pop back on top of it.
+    const ground = terrain.height(p.x, p.z)
+    if (p.y < ground - 0.5) {
+      rb.setTranslation({ x: p.x, y: ground + 1, z: p.z }, true)
+      rb.setLinvel({ x: 0, y: 0, z: 0 }, true)
+    }
     player.position.set(p.x, p.y, p.z)
     camera.position.set(p.x, p.y + EYE, p.z)
     player.eye.copy(camera.position)
