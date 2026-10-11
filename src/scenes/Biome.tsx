@@ -342,9 +342,10 @@ function Buggy({ position }: { position: [number, number, number] }) {
 function ReturnSign({ biome }: { biome: BiomeDef }) {
   const goTo = useSession((s) => s.goTo)
   const [sx, , sz] = spawnPoint(biome)
-  const pos: [number, number, number] = [sx + 3, 1.3, sz + 2]
+  // Ahead and to the right of where you arrive, angled to face you.
+  const pos: [number, number, number] = [sx + 5, 1.3, sz - 2]
   useInteractable(`return-${biome.id}`, pos, 4, 'Return to the zoo', () => goTo({ kind: 'hub' }))
-  return <Sign lines={[{ text: '← ZOO', size: 90, bold: true }, { text: 'Press E to head home', size: 40, color: '#5a4630' }]} position={pos} rotation={[0, -0.5, 0]} />
+  return <Sign lines={[{ text: '← ZOO', size: 90, bold: true }, { text: 'Press E to head home', size: 40, color: '#5a4630' }]} position={pos} rotation={[0, -1.19, 0]} />
 }
 
 function HuntControls() {

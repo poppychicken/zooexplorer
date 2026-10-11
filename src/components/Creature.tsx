@@ -221,7 +221,8 @@ function makeStepper(c: CreatureRuntime, def: CreatureDef, gait: Gait, halfSize:
     // Spooked by the player unless calmed by bait.
     const calm = c.mode === 'eating' || c.mode === 'calm'
     if (!calm && c.mode !== 'flee') {
-      const detect = detectionRadius(def) * (c.mode === 'toBait' ? 0.5 : 1)
+      // Hungry creatures heading for bait are less wary.
+      const detect = detectionRadius(def) * (c.mode === 'toBait' ? 0.4 : 1)
       if (toPlayer < detect) {
         startFlee(c, legendary ? 4 : 5)
         if (useGame.getState().discovered[c.creatureId]) useSession.getState().logSound(`The ${def.name} spotted you and bolted!`)

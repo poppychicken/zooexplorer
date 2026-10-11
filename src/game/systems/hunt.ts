@@ -7,6 +7,9 @@ import { captureChance, rollCapture } from './capture'
 import { formatMoney } from './economy'
 import { baits, creatures, now, nextUid, player, type CreatureRuntime } from './world'
 
+/** How far ahead of the player bait lands, in metres. */
+export const BAIT_TOSS = 7
+
 /** Seconds between net throws. */
 export const NET_COOLDOWN = 1.2
 
@@ -50,12 +53,13 @@ export function dropBait(): boolean {
   }
   const def = BAIT[premium ? 'premium' : 'basic']
   const flat = new Vector3(player.forward.x, 0, player.forward.z).normalize()
-  const pos = player.position.clone().addScaledVector(flat, 2.5)
+  // Tossed far enough that a creature coming to eat it stays outside its (reduced) detection range.
+  const pos = player.position.clone().addScaledVector(flat, BAIT_TOSS)
   pos.y = 0
   const id = nextUid()
   baits.set(id, { id, position: pos, premium, expiresAt: now() + def.lifetimeSeconds })
   playUi('bait')
-  session.toast(premium ? 'Premium bait placed. Back off and wait.' : 'Bait placed. Back off and wait.', 'info')
+  session.toast(premium ? 'Premium bait tossed. Keep still and wait.' : 'Bait tossed. Keep still and wait.', 'info')
   return true
 }
 
