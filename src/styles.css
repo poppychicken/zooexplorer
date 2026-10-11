@@ -546,3 +546,22 @@ button.small {
 .panel > button.danger {
   align-self: flex-start;
 }
+
+/* Ticket sale popup over the zoo's ticket booth. */
+.pay-popup {
+  font: 800 22px system-ui, sans-serif;
+  color: #ffe7a0;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
+  white-space: nowrap;
+  animation: pay-rise 1.6s ease-out forwards;
+}
+@keyframes pay-rise {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-40px);
+  }
+}

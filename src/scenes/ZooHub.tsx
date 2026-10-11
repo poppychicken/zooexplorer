@@ -7,6 +7,7 @@ import { Player } from '../components/Player'
 import { PropField, type PlacedProp } from '../components/Props'
 import { Sign } from '../components/Sign'
 import { CreatureModel } from '../components/CreatureModel'
+import { Visitors } from '../components/Visitors'
 import { CREATURES, type CreatureDef, type Rarity } from '../game/data/creatures'
 import { BIOME_BY_ID } from '../game/data/biomes'
 import { useGame, useSession } from '../game/state/store'
@@ -281,7 +282,7 @@ function Exhibit({ creatureId, x, z, facing }: (typeof PLOTS)[number]) {
     ? [
         { text: def.name, size: 64, bold: true },
         { text: `${def.flies ? 'AVIARY · ' : ''}${def.rarity.toUpperCase()} · ×${count}`, size: 38, color: RARITY_INK[def.rarity], bold: true },
-        { text: `+$${def.income * count}/min`, size: 46, color: '#2e6b2e' },
+        { text: `Ticket +$${(def.ticket * count).toFixed(2)}`, size: 46, color: '#2e6b2e' },
       ]
     : [
         { text: discovered ? def.name : '???', size: 64, bold: true },
@@ -313,9 +314,21 @@ function Exhibit({ creatureId, x, z, facing }: (typeof PLOTS)[number]) {
   )
 }
 
+/** Visitors look into every open exhibit from the path side of its fence. */
+function ZooVisitors() {
+  const captured = useGame((s) => s.captured)
+  const spots = PLOTS.filter((p) => (captured[p.creatureId] ?? 0) > 0).map((p) => ({
+    x: p.x + p.facing * (PLOT / 2 + 1.2),
+    z: p.z,
+    facing: (-p.facing * Math.PI) / 2,
+  }))
+  return <Visitors spots={spots} />
+}
+
 function Paths() {
   const tiles: [number, number, number, number][] = [
     [0, -6, 8, 96], // main north-south path
+    [0, 50, 8, 16], // entrance and ticket booth
     [-10.5, -27, 7, 8],
     [-10.5, -9, 7, 8],
     [-10.5, 9, 7, 8],
@@ -523,6 +536,7 @@ export function ZooHub() {
       <Fountain />
       <ExpeditionGate />
       <ShopKiosk />
+      <ZooVisitors />
       <Bench x={-4.5} z={14} rot={Math.PI / 2} />
       <Bench x={4.5} z={14} rot={-Math.PI / 2} />
       <Bench x={-4.5} z={-14} rot={Math.PI / 2} />
