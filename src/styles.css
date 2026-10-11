@@ -565,3 +565,14 @@ button.small {
     transform: translateY(-40px);
   }
 }
+
+.speedo {
+  font-size: 20px;
+  font-weight: 800;
+}
+.speedo span {
+  display: inline-block;
+  min-width: 2.2em;
+  text-align: right;
+  color: #ffe7a0;
+}

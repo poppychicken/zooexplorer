@@ -21,6 +21,7 @@ npm run dev        # http://localhost:5173
 | Q | Drop bait (premium bait is used first) |
 | Left click | Throw net |
 | Tab | Field journal |
+| E at the buggy | Get in or out of the Off-road Buggy (W/S drive, A/D steer, Shift boost) |
 | Esc | Pause menu: return to zoo, sensitivity, reset save |
 
 ### Loop
@@ -30,7 +31,8 @@ npm run dev        # http://localhost:5173
 3. **Track.** Follow footprints, and listen for spatialised calls. The sound log tells you roughly where each came from. Creatures spot you inside their detection radius, which is larger when you sprint and largest for the big-eared fennec fox.
 4. **Lure.** Drop bait and back off. Creatures nearby walk over, eat and stay calm, and a calm creature won't flee.
 5. **Net.** Capture chance is `base(rarity) × net multiplier × (baited ? 1.5 : 1)`, capped at 95%. The journal shows your current odds.
-6. **Legendaries.** Each biome has one in a lair at the far end. Netting it starts a mini-game: hold to wind in, then release while the struggle marker is in the green zone. Better nets widen the zone. Three misses and it breaks free.
+6. **Drive.** Once you own the Off-road Buggy, it's parked by the expedition gate and wherever you arrive in a biome. Press E to hop in. It's much faster than walking, but the engine scares creatures from twice as far, so park and walk the last stretch.
+7. **Legendaries.** Each biome has one in a lair at the far end. Netting it starts a mini-game: hold to wind in, then release while the struggle marker is in the green zone. Better nets widen the zone. Three misses and it breaks free.
 
 **Visitors pay to get in.** Once your zoo has an animal, about 4 visitors a minute buy a ticket at the booth by the entrance. The ticket price is the sum over every animal: common +$0.50, uncommon +$1.25, rare +$3, legendary +$10, so more and rarer animals mean pricier tickets. Your income is visitors × ticket price, and it keeps coming while you're away. Exhibits hold any number of animals. Every extra catch of a species joins its enclosure and adds that species' income. Creatures that can fly (the barn owl) live in a roofed aviary.
 
