@@ -11,13 +11,15 @@ describe('save store', () => {
     expect(state().netTier).toBe(1)
   })
 
-  it('opens an exhibit for a new species and pays a fee for duplicates', () => {
+  it('opens an exhibit for a new species and adds repeat catches to it', () => {
     expect(state().capture('red_fox')).toEqual({ kind: 'new' })
     expect(state().discovered.red_fox).toBe(true)
-    const before = state().money
-    expect(state().capture('red_fox')).toEqual({ kind: 'duplicate', fee: 30 })
-    expect(state().money).toBe(before + 30)
-    expect(state().captured.red_fox).toBe(2)
+    expect(state().capture('red_fox')).toEqual({ kind: 'added', count: 2 })
+    expect(state().capture('red_fox')).toEqual({ kind: 'added', count: 3 })
+    expect(state().captured.red_fox).toBe(3)
+    // No cap on how many an exhibit holds.
+    for (let i = 0; i < 50; i++) state().capture('red_fox')
+    expect(state().captured.red_fox).toBe(53)
   })
 
   it('needs money to buy and Mk II before Mk III', () => {

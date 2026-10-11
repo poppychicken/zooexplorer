@@ -37,6 +37,8 @@ export interface CreatureDef {
   call: CallKind
   /** Visible height of the model in metres, used to scale generated GLBs. */
   height: number
+  /** Flying creatures must live in a roofed aviary at the zoo. */
+  flies?: boolean
 }
 
 export type CallKind = 'yip' | 'grunt' | 'hoot' | 'bell' | 'chirp' | 'hiss' | 'rasp' | 'chime'
@@ -85,6 +87,7 @@ export const CREATURES: CreatureDef[] = [
     placeholder: { shape: 'bird', size: 0.45, body: '#d9a86c', accent: '#fbf3e4', detail: '#3a2a1a', ears: 'none', tail: 'short' },
     call: 'hoot',
     height: 0.45,
+    flies: true,
   }),
   def({
     id: 'moss_antler_stag',

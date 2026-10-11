@@ -3,7 +3,7 @@ import { persist } from 'zustand/middleware'
 import type { BiomeId } from '../data/creatures'
 import { CREATURE_BY_ID } from '../data/creatures'
 import { BASIC_BAIT_PER_EXPEDITION, SHOP_ITEM_BY_ID, STARTING_MONEY, type NetTier, type ShopItemId } from '../data/shop'
-import { incomePerMinute, offlineEarnings, rehomingFee } from '../systems/economy'
+import { incomePerMinute, offlineEarnings } from '../systems/economy'
 
 /** Persisted save data. */
 export interface SaveState {
@@ -19,7 +19,8 @@ export interface SaveState {
   mouseSensitivity: number
 }
 
-export type CaptureResult = { kind: 'new' } | { kind: 'duplicate'; fee: number }
+/** `count` is how many of that species the exhibit now holds. */
+export type CaptureResult = { kind: 'new' } | { kind: 'added'; count: number }
 
 interface Actions {
   tick: (now: number) => void
@@ -69,16 +70,9 @@ export const useGame = create<SaveState & Actions>()(
       },
 
       capture: (id) => {
-        const captured = get().captured
-        const count = captured[id] ?? 0
-        const discovered = { ...get().discovered, [id]: true as const }
-        if (count === 0) {
-          set({ captured: { ...captured, [id]: 1 }, discovered })
-          return { kind: 'new' }
-        }
-        const fee = rehomingFee(id)
-        set({ captured: { ...captured, [id]: count + 1 }, discovered, money: get().money + fee })
-        return { kind: 'duplicate', fee }
+        const count = (get().captured[id] ?? 0) + 1
+        set({ captured: { ...get().captured, [id]: count }, discovered: { ...get().discovered, [id]: true } })
+        return count === 1 ? { kind: 'new' } : { kind: 'added', count }
       },
 
       canBuy: (id) => {

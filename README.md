@@ -32,7 +32,7 @@ npm run dev        # http://localhost:5173
 5. **Net.** Capture chance is `base(rarity) × net multiplier × (baited ? 1.5 : 1)`, capped at 95%. The journal shows your current odds.
 6. **Legendaries.** Each biome has one in a lair at the far end. Netting it starts a mini-game: hold to wind in, then release while the struggle marker is in the green zone. Better nets widen the zone. Three misses and it breaks free.
 
-Capturing a species you already have re-homes the duplicate for a one-off fee (15 minutes of that exhibit's income).
+Exhibits hold any number of animals. Every extra catch of a species joins its enclosure and adds that species' income. Creatures that can fly (the barn owl) live in a roofed aviary.
 
 Balance values live in `src/game/data/` (`creatures.ts`, `shop.ts`, `biomes.ts`) and `src/game/systems/capture.ts`.
 
