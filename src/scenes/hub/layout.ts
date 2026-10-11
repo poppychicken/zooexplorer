@@ -1,0 +1,202 @@
+import type { BiomeId } from '../../game/data/creatures'
+
+/**
+ * Zoo hub layout, loosely modelled on Taronga Zoo Sydney: a hillside running down to the harbour.
+ * North (−z) is the top of the hill with the Main Entrance; the ferry wharf sits on the harbour
+ * at the bottom (+z), and the city skyline is across the water to the south-west.
+ */
+
+/** Walkable area; walls stop the player at these lines. */
+export const BOUNDS = { minX: -60, maxX: 76, minZ: -76, maxZ: 54 }
+/** Where land meets the harbour on the west and south. */
+const SHORE_X = -62
+const SHORE_Z = 56
+const HILL_TOP = 14
+
+export interface Precinct {
+  id: string
+  name: string
+  /** One-line flavour shown on the precinct sign. */
+  subtitle: string
+  center: [number, number]
+  /** Biome whose species are exhibited here, or null for a future precinct still under construction. */
+  biome: BiomeId | null
+  ground: string
+}
+
+/** Each expedition biome is exhibited in one precinct; the rest are reserved for future biomes. */
+export const PRECINCTS: Precinct[] = [
+  { id: 'rainforest-trail', name: 'Rainforest Trail', subtitle: 'Temperate Forest expeditions', center: [34, 2], biome: 'forest', ground: '#3f6a32' },
+  { id: 'african-savannah', name: 'African Savannah', subtitle: 'Arid Canyon expeditions · harbour views', center: [-32, 6], biome: 'canyon', ground: '#b9a064' },
+  { id: 'nura-diya', name: 'Nura Diya Australia', subtitle: 'Under construction', center: [-30, -42], biome: null, ground: '#9a7b4f' },
+  { id: 'tiger-trek', name: 'Tiger Trek', subtitle: 'Under construction', center: [32, -42], biome: null, ground: '#55703c' },
+  { id: 'great-southern-oceans', name: 'Great Southern Oceans', subtitle: 'Under construction', center: [26, 38], biome: null, ground: '#8f8a7a' },
+]
+
+/** Exhibit plots sit in a 2×2 grid around each precinct's central crossroads. */
+export const PLOT_SIZE = 12
+export const PLOT_OFFSET = 9
+
+export const ENTRANCE: [number, number] = [0, -64]
+export const BOOTH: [number, number] = [-3.6, -58]
+export const SPAWN: [number, number] = [0, -52]
+export const SHOP: [number, number] = [11, -55]
+export const WHARF: [number, number] = [-8, 50]
+export const BUGGY_PARK: [number, number] = [-9, -50]
+export const SKY_SAFARI = { top: [-15, -60] as [number, number], bottom: [-24, 44] as [number, number] }
+
+// --- Footpaths -----------------------------------------------------------
+
+/** Path network: visitors route along it and the terrain is painted with it. */
+export const NODES: Record<string, [number, number]> = {
+  entrance: ENTRANCE,
+  plaza: [0, -50],
+  nuraDiya: [-30, -42],
+  tigerTrek: [32, -42],
+  mid: [0, -14],
+  rainforest: [34, 2],
+  savannah: [-32, 6],
+  lower: [2, 26],
+  oceans: [26, 38],
+  wharf: [-6, 46],
+}
+
+export const EDGES: [string, string][] = [
+  ['entrance', 'plaza'],
+  ['plaza', 'nuraDiya'],
+  ['plaza', 'tigerTrek'],
+  ['plaza', 'mid'],
+  ['mid', 'rainforest'],
+  ['mid', 'savannah'],
+  ['mid', 'lower'],
+  ['rainforest', 'lower'],
+  ['savannah', 'lower'],
+  ['lower', 'oceans'],
+  ['lower', 'wharf'],
+]
+
+const PATH_WIDTH = 3.2
+
+/** Shortest node-to-node route (by distance) through the path network. */
+export function route(from: string, to: string): [number, number][] {
+  const dist: Record<string, number> = {}
+  const prev: Record<string, string | null> = {}
+  const open = new Set(Object.keys(NODES))
+  for (const k of open) dist[k] = Infinity
+  dist[from] = 0
+  prev[from] = null
+  while (open.size) {
+    let u = ''
+    for (const k of open) if (!u || dist[k] < dist[u]) u = k
+    open.delete(u)
+    if (u === to) break
+    for (const [a, b] of EDGES) {
+      const v = a === u ? b : b === u ? a : null
+      if (!v || !open.has(v)) continue
+      const d = dist[u] + Math.hypot(NODES[u][0] - NODES[v][0], NODES[u][1] - NODES[v][1])
+      if (d < dist[v]) {
+        dist[v] = d
+        prev[v] = u
+      }
+    }
+  }
+  const out: [number, number][] = []
+  for (let k: string | null = to; k; k = prev[k] ?? null) out.unshift(NODES[k])
+  return out
+}
+
+function distToSegment(px: number, pz: number, a: [number, number], b: [number, number]): number {
+  const dx = b[0] - a[0]
+  const dz = b[1] - a[1]
+  const t = Math.max(0, Math.min(1, ((px - a[0]) * dx + (pz - a[1]) * dz) / (dx * dx + dz * dz)))
+  return Math.hypot(px - (a[0] + t * dx), pz - (a[1] + t * dz))
+}
+
+export function onPath(x: number, z: number, margin = 0): boolean {
+  for (const [a, b] of EDGES) if (distToSegment(x, z, NODES[a], NODES[b]) < PATH_WIDTH / 2 + margin) return true
+  return false
+}
+
+// --- Terrain -------------------------------------------------------------
+
+const smoothstep = (a: number, b: number, x: number) => {
+  const t = Math.max(0, Math.min(1, (x - a) / (b - a)))
+  return t * t * (3 - 2 * t)
+}
+
+/** The bare hillside: high in the north, falling to the harbour in the south and the west. */
+function hillside(x: number, z: number): number {
+  const slope = HILL_TOP * (1 - smoothstep(-70, SHORE_Z, z))
+  const gentle = Math.sin(x * 0.07) * 0.6 + Math.cos(z * 0.09 + x * 0.03) * 0.5
+  const land = slope + gentle
+  // Harbour cliffs: drop to below the waterline past the shore.
+  const shoreDist = Math.min(x - SHORE_X, SHORE_Z - z)
+  if (shoreDist <= 0) return -2.5
+  return land * smoothstep(0, 10, shoreDist) + -2.5 * (1 - smoothstep(0, 10, shoreDist))
+}
+
+interface Pad {
+  x: number
+  z: number
+  radius: number
+  blend: number
+  height: number
+}
+
+/** Flat terraces for precincts and plazas, so exhibits and buildings sit level on the hill. */
+const PADS: Pad[] = [
+  ...PRECINCTS.map((p) => ({ x: p.center[0], z: p.center[1], radius: 17, blend: 10, height: hillside(p.center[0], p.center[1]) })),
+  { x: 0, z: -56, radius: 12, blend: 8, height: hillside(0, -56) },
+  { x: SHOP[0], z: SHOP[1], radius: 4, blend: 4, height: hillside(0, -56) },
+  { x: WHARF[0], z: WHARF[1] - 2, radius: 6, blend: 6, height: 0.6 },
+]
+
+export function padHeight(x: number, z: number): number {
+  for (const p of PADS) if (Math.hypot(x - p.x, z - p.z) <= p.radius) return p.height
+  return hubHeight(x, z)
+}
+
+/** Ground height of the zoo hub at (x, z). */
+export function hubHeight(x: number, z: number): number {
+  let h = hillside(x, z)
+  for (const p of PADS) {
+    const d = Math.hypot(x - p.x, z - p.z)
+    const w = 1 - smoothstep(p.radius, p.radius + p.blend, d)
+    if (w > 0) h = h * (1 - w) + p.height * w
+  }
+  return h
+}
+
+export function precinctHeight(p: Precinct): number {
+  return padHeight(p.center[0], p.center[1])
+}
+
+/** Ground colour: footpaths, precinct ground, sandy shore and bushland elsewhere. */
+export function hubColor(x: number, z: number, h: number, jitter: number): string {
+  if (h < -0.2) return '#6b6650'
+  if (onPath(x, z)) return jitter > 0.5 ? '#cdb894' : '#c6b08a'
+  for (const p of PRECINCTS) {
+    if (Math.abs(x - p.center[0]) < 3 || Math.abs(z - p.center[1]) < 3) {
+      if (Math.hypot(x - p.center[0], z - p.center[1]) < 16) return jitter > 0.5 ? '#d2be98' : '#cab48c'
+    }
+    if (Math.hypot(x - p.center[0], z - p.center[1]) < 17) return p.ground
+  }
+  if (Math.hypot(x, z + 56) < 12) return jitter > 0.5 ? '#d8c6a2' : '#d0bd98'
+  if (h < 0.8) return '#d9c79c'
+  const greens = ['#5e8a42', '#679449', '#557f3c', '#6f9c4f']
+  return greens[Math.floor(jitter * greens.length) % greens.length]
+}
+
+/** Is this spot free for scattering bushland trees? */
+export function isOpenGround(x: number, z: number): boolean {
+  if (x < BOUNDS.minX + 1 || x > BOUNDS.maxX - 1 || z < BOUNDS.minZ + 1 || z > BOUNDS.maxZ - 1) return false
+  if (onPath(x, z, 2.5)) return false
+  for (const p of PRECINCTS) if (Math.hypot(x - p.center[0], z - p.center[1]) < 22) return false
+  if (Math.hypot(x, z + 56) < 15) return false
+  if (Math.hypot(x - SHOP[0], z - SHOP[1]) < 7) return false
+  if (Math.hypot(x - WHARF[0], z - WHARF[1]) < 10) return false
+  if (Math.hypot(x - BUGGY_PARK[0], z - BUGGY_PARK[1]) < 6) return false
+  // Keep the Sky Safari line clear of trees.
+  if (distToSegment(x, z, SKY_SAFARI.top, SKY_SAFARI.bottom) < 4) return false
+  return true
+}

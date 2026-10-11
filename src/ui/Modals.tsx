@@ -63,7 +63,7 @@ function Pause() {
     <Panel title={firstVisit ? 'Zoo Explorer' : 'Paused'}>
       {firstVisit && (
         <p className="lead">
-          Your zoo is empty. Head out through the expedition gate, track down creatures, lure them with bait and net them. Every species you bring
+          Your zoo is empty. Head down the hill to the ferry wharf and set out on an expedition, track down creatures, lure them with bait and net them. Every species you bring
           home opens an exhibit that earns money, even while you're away.
         </p>
       )}
@@ -108,7 +108,7 @@ function Gate() {
   const captured = useGame((s) => s.captured)
   const goTo = useSession((s) => s.goTo)
   return (
-    <Panel title="Expedition gate" onClose={resume} wide>
+    <Panel title="Expedition ferry" onClose={resume} wide>
       <div className="cards">
         {BIOMES.map((b) => {
           const locked = b.requires === 'buggy' && !owned.buggy

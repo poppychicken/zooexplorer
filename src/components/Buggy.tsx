@@ -5,7 +5,7 @@ import { Group, Quaternion, Vector3 } from 'three'
 import { useGame, useSession } from '../game/state/store'
 import { isDown } from '../game/systems/input'
 import { interactables } from '../game/systems/interact'
-import { player, vehicle } from '../game/systems/world'
+import { player, terrain, vehicle } from '../game/systems/world'
 
 /** Arcade handling, in m/s and m/s². */
 const MAX_SPEED = 16
@@ -167,6 +167,9 @@ export function Buggy({ position, heading = 0 }: { position: [number, number, nu
     rb.setLinvel({ x: Math.sin(s.heading) * s.speed, y: v.y, z: Math.cos(s.heading) * s.speed }, true)
 
     const p = rb.translation()
+    // Safety net: never let the buggy end up under the ground.
+    const ground = terrain.height(p.x, p.z)
+    if (p.y < ground - 0.5) rb.setTranslation({ x: p.x, y: ground + 0.3, z: p.z }, true)
     tmp.copy(SEAT).applyAxisAngle(up, s.heading)
     vehicle.seat.set(p.x + tmp.x, p.y + tmp.y, p.z + tmp.z)
     vehicle.heading = s.heading

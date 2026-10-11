@@ -16,7 +16,7 @@ import { useInteractable } from '../game/systems/interact'
 import { dropBait, onNetThrown, resolveNetHit, throwNet, type NetShot } from '../game/systems/hunt'
 import { updateListener } from '../game/systems/audio'
 import { mulberry32, pickWeighted, range } from '../game/systems/rng'
-import { TRACK_LIFETIME, baits, creatures, nextUid, now, player, resetWorld, tracks } from '../game/systems/world'
+import { TRACK_LIFETIME, baits, creatures, nextUid, now, player, resetWorld, terrain, tracks } from '../game/systems/world'
 
 const SPAWN_CLEAR = 14
 const LAIR_CLEAR = 10
@@ -335,6 +335,10 @@ function HuntControls() {
 
 export function Biome({ biomeId }: { biomeId: BiomeId }) {
   const biome = BIOME_BY_ID[biomeId]
+  // Expedition biomes are flat, unlike the hillside zoo.
+  useMemo(() => {
+    terrain.height = () => 0
+  }, [])
   const props = useMemo(() => scatterProps(biome), [biome])
   const uids = useCreaturePopulation(biome)
   const spawn = spawnPoint(biome)

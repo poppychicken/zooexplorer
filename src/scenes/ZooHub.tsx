@@ -1,36 +1,81 @@
 import { useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
-import { CuboidCollider, CylinderCollider, RigidBody } from '@react-three/rapier'
+import { CuboidCollider, RigidBody } from '@react-three/rapier'
 import { CanvasTexture, DoubleSide, Group, RepeatWrapping } from 'three'
-import { Ground } from '../components/Ground'
 import { Player } from '../components/Player'
 import { PropField, type PlacedProp } from '../components/Props'
 import { Sign } from '../components/Sign'
 import { CreatureModel } from '../components/CreatureModel'
-import { Visitors } from '../components/Visitors'
+import { Visitors, type ViewingSpot } from '../components/Visitors'
 import { OwnedBuggy } from '../components/Buggy'
 import { CREATURES, type CreatureDef, type Rarity } from '../game/data/creatures'
 import { BIOME_BY_ID } from '../game/data/biomes'
 import { useGame, useSession } from '../game/state/store'
 import { useInteractable } from '../game/systems/interact'
 import { mulberry32, range } from '../game/systems/rng'
+import { terrain } from '../game/systems/world'
+import { HubTerrain } from './hub/HubTerrain'
+import { Harbour } from './hub/Harbour'
+import { SkySafari } from './hub/SkySafari'
+import {
+  BOUNDS,
+  BUGGY_PARK,
+  NODES,
+  PLOT_OFFSET,
+  PLOT_SIZE,
+  PRECINCTS,
+  SHOP,
+  SPAWN,
+  hubHeight,
+  isOpenGround,
+  padHeight,
+  precinctHeight,
+  type Precinct,
+} from './hub/layout'
 
-const HALF = 60
-const PLOT = 12
+const PLOT = PLOT_SIZE
 
 /** Darker rarity colours that read well on a light signboard. */
 const RARITY_INK: Record<Rarity, string> = { common: '#4d6358', uncommon: '#2a78c2', rare: '#7a3fc0', legendary: '#b07a00' }
 
-/** Exhibit plots: forest species on the west side of the main path, canyon species on the east. */
-export const PLOTS: { creatureId: string; x: number; z: number; facing: 1 | -1 }[] = (() => {
-  const forest = CREATURES.filter((c) => c.biome === 'forest')
-  const canyon = CREATURES.filter((c) => c.biome === 'canyon')
-  const zs = [-27, -9, 9, 27]
-  return [
-    ...forest.map((c, i) => ({ creatureId: c.id, x: -20, z: zs[i], facing: 1 as const })),
-    ...canyon.map((c, i) => ({ creatureId: c.id, x: 20, z: zs[i], facing: -1 as const })),
-  ]
-})()
+/** Corners of a precinct's 2×2 plot grid, as [x sign, z sign]. */
+const CORNERS: [1 | -1, 1 | -1][] = [
+  [-1, -1],
+  [1, -1],
+  [-1, 1],
+  [1, 1],
+]
+
+interface Plot {
+  creatureId: string
+  precinct: Precinct
+  /** Plot centre in world space. */
+  x: number
+  z: number
+  y: number
+  /** Which side of the precinct crossroads the plot is on. */
+  sx: 1 | -1
+  sz: 1 | -1
+}
+
+/** Each biome's four species fill the plots of the precinct it maps to. */
+export const PLOTS: Plot[] = PRECINCTS.flatMap((p) => {
+  if (!p.biome) return []
+  const y = precinctHeight(p)
+  return CREATURES.filter((c) => c.biome === p.biome).map((c, i) => {
+    const [sx, sz] = CORNERS[i % 4]
+    return { creatureId: c.id, precinct: p, x: p.center[0] + sx * PLOT_OFFSET, z: p.center[1] + sz * PLOT_OFFSET, y, sx, sz }
+  })
+})
+
+/** The node in the path network that serves a precinct. */
+const PRECINCT_NODE: Record<string, string> = {
+  'rainforest-trail': 'rainforest',
+  'african-savannah': 'savannah',
+  'nura-diya': 'nuraDiya',
+  'tiger-trek': 'tigerTrek',
+  'great-southern-oceans': 'oceans',
+}
 
 function Fence({ x, z, size, openSide }: { x: number; z: number; size: number; openSide: 1 | -1 }) {
   const h = size / 2
@@ -273,12 +318,11 @@ function Habitat({ def, seed }: { def: CreatureDef; seed: number }) {
   )
 }
 
-function Exhibit({ creatureId, x, z, facing }: (typeof PLOTS)[number]) {
+function Exhibit({ creatureId, x, z, y, sx, sz }: Plot) {
   const count = useGame((s) => s.captured[creatureId] ?? 0)
   const discovered = useGame((s) => !!s.discovered[creatureId])
   const def = CREATURES.find((c) => c.id === creatureId)!
   const open = count > 0
-  const signX = x + facing * (PLOT / 2 + 0.6)
   const lines = open
     ? [
         { text: def.name, size: 64, bold: true },
@@ -291,14 +335,14 @@ function Exhibit({ creatureId, x, z, facing }: (typeof PLOTS)[number]) {
         { text: `Found in: ${BIOME_BY_ID[def.biome].name}`, size: 34, color: '#6b5a44' },
       ]
   return (
-    <group>
-      <Fence x={x} z={z} size={PLOT} openSide={facing} />
-      {/* Off to one side of the viewing spot so it doesn't block the enclosure. */}
-      <Sign lines={lines} position={[signX, 1.1, z + 4.2]} rotation={[0, (facing * Math.PI) / 2, 0]} width={2} height={1} />
+    <group position={[0, y, 0]}>
+      <Fence x={x} z={z} size={PLOT} openSide={sx} />
+      {/* On the walkway side, towards the outer corner so it doesn't block the view in. */}
+      <Sign lines={lines} position={[x + sx * 4.2, 1.1, z - sz * (PLOT / 2 + 0.5)]} rotation={[0, sz > 0 ? Math.PI : 0, 0]} width={2} height={1} />
       <group position={[x, 0, z]}>
         {open ? (
           <>
-            <Habitat def={def} seed={creatureId.length * 97 + x} />
+            <Habitat def={def} seed={creatureId.length * 97 + Math.round(x)} />
             {def.flies && <AviaryCage />}
             {Array.from({ length: Math.min(count, MAX_VISIBLE_RESIDENTS) }, (_, i) => (
               <ExhibitResident key={i} def={def} half={PLOT / 2 - 1.5} seed={i * 7919 + creatureId.length} />
@@ -315,117 +359,121 @@ function Exhibit({ creatureId, x, z, facing }: (typeof PLOTS)[number]) {
   )
 }
 
-/** Visitors look into every open exhibit from the path side of its fence. */
-function ZooVisitors() {
-  const captured = useGame((s) => s.captured)
-  const spots = PLOTS.filter((p) => (captured[p.creatureId] ?? 0) > 0).map((p) => ({
-    x: p.x + p.facing * (PLOT / 2 + 1.2),
-    z: p.z,
-    facing: (-p.facing * Math.PI) / 2,
-  }))
-  return <Visitors spots={spots} />
-}
-
-function Paths() {
-  const tiles: [number, number, number, number][] = [
-    [0, -6, 8, 96], // main north-south path
-    [0, 50, 8, 16], // entrance and ticket booth
-    [-10.5, -27, 7, 8],
-    [-10.5, -9, 7, 8],
-    [-10.5, 9, 7, 8],
-    [-10.5, 27, 7, 8],
-    [10.5, -27, 7, 8],
-    [10.5, -9, 7, 8],
-    [10.5, 9, 7, 8],
-    [10.5, 27, 7, 8],
-  ]
+/** Precinct centrepiece: a timber arch over the crossroads, plus benches. Unbuilt precincts get site hoardings. */
+function PrecinctHub({ precinct }: { precinct: Precinct }) {
+  const [cx, cz] = precinct.center
+  const y = precinctHeight(precinct)
+  const building = precinct.biome === null
   return (
     <>
-      {tiles.map(([x, z, w, d], i) => (
-        <mesh key={i} position={[x, 0.07, z]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
-          <planeGeometry args={[w, d]} />
-          <meshStandardMaterial color="#cdb894" flatShading />
+    <group position={[cx, y, cz]}>
+      {[-3.4, 3.4].map((dx) => (
+        <mesh key={dx} position={[dx, 2, 0]} castShadow>
+          <boxGeometry args={[0.5, 4, 0.5]} />
+          <meshStandardMaterial color="#5e4128" flatShading />
         </mesh>
       ))}
-      <mesh position={[0, 0.075, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
-        <circleGeometry args={[7, 10]} />
-        <meshStandardMaterial color="#d8c6a2" flatShading />
-      </mesh>
+      <Sign
+        lines={[
+          { text: precinct.name.toUpperCase(), size: 64, bold: true, color: '#fff2d4' },
+          { text: precinct.subtitle, size: 36, color: '#fff2d4' },
+        ]}
+        position={[0, 4.1, 0]}
+        width={6.2}
+        height={1.1}
+        background={building ? '#8a5a1c' : '#2f5d34'}
+        border={building ? '#5c3a10' : '#20401f'}
+        posts={false}
+      />
+      {building && <Hoardings />}
+    </group>
+      {!building && (
+        <>
+          <Bench x={cx - 2.2} z={cz + 6} rot={Math.PI / 2} />
+          <Bench x={cx + 2.2} z={cz - 6} rot={-Math.PI / 2} />
+        </>
+      )}
     </>
   )
 }
 
-function Fountain() {
+/** Construction-site hoardings ringing a precinct that's still being built. */
+function Hoardings() {
+  const R = 15
+  const panels: { p: [number, number, number]; r: number }[] = []
+  for (let t = -R + 2.5; t < R; t += 5) {
+    panels.push({ p: [t, 1.1, -R], r: 0 }, { p: [t, 1.1, R], r: 0 }, { p: [-R, 1.1, t], r: Math.PI / 2 }, { p: [R, 1.1, t], r: Math.PI / 2 })
+  }
   return (
-    <group>
-      <mesh position={[0, 0.35, 0]} castShadow receiveShadow>
-        <cylinderGeometry args={[2.6, 2.8, 0.7, 10]} />
-        <meshStandardMaterial color="#9a9a94" flatShading />
-      </mesh>
-      <mesh position={[0, 0.66, 0]}>
-        <cylinderGeometry args={[2.3, 2.3, 0.05, 10]} />
-        <meshStandardMaterial color="#5fb0d6" flatShading transparent opacity={0.85} />
-      </mesh>
-      <mesh position={[0, 1.4, 0]} castShadow>
-        <cylinderGeometry args={[0.3, 0.45, 1.6, 8]} />
-        <meshStandardMaterial color="#a8a8a2" flatShading />
-      </mesh>
-      <mesh position={[0, 2.3, 0]} castShadow>
-        <icosahedronGeometry args={[0.55, 0]} />
-        <meshStandardMaterial color="#e2b04a" flatShading metalness={0.4} roughness={0.4} />
-      </mesh>
+    <>
+      {panels.map((h, i) => (
+        <mesh key={i} position={h.p} rotation={[0, h.r, 0]} castShadow>
+          <boxGeometry args={[5, 2.2, 0.15]} />
+          <meshStandardMaterial color={i % 2 ? '#e2b04a' : '#f2efe6'} flatShading />
+        </mesh>
+      ))}
+      {/* Nobody gets onto the building site. */}
       <RigidBody type="fixed" colliders={false}>
-        <CylinderCollider args={[0.6, 2.8]} position={[0, 0.6, 0]} />
+        <CuboidCollider args={[R, 2, R]} position={[0, 2, 0]} />
       </RigidBody>
-    </group>
+      {[
+        [4, 6],
+        [-6, 7],
+        [7, -5],
+      ].map(([x, z], i) => (
+        <mesh key={`c${i}`} position={[x, 0.4, z]} rotation={[0, i, 0]} castShadow>
+          <boxGeometry args={[1.6, 0.8, 1.2]} />
+          <meshStandardMaterial color="#9a9a94" flatShading />
+        </mesh>
+      ))}
+    </>
   )
 }
 
-function ExpeditionGate() {
-  const openModal = useSession((s) => s.openModal)
-  useInteractable('gate', [0, 1.5, -46], 6, 'Plan an expedition', () => openModal('gate'))
-  return (
-    <group position={[0, 0, -48]}>
-      {[-4, 4].map((x) => (
-        <mesh key={x} position={[x, 3, 0]} castShadow>
-          <boxGeometry args={[1.2, 6, 1.2]} />
-          <meshStandardMaterial color="#6e4c2f" flatShading />
-        </mesh>
-      ))}
-      <mesh position={[0, 6.3, 0]} castShadow>
-        <boxGeometry args={[10, 1, 1.4]} />
-        <meshStandardMaterial color="#5a3c24" flatShading />
-      </mesh>
-      <Sign
-        lines={[{ text: 'EXPEDITIONS', size: 84, bold: true, color: '#fff2d4' }]}
-        position={[0, 6.3, 0.75]}
-        width={6}
-        height={0.8}
-        background="#2f5d34"
-        border="#20401f"
-        posts={false}
-      />
-      {/* The gate itself: a closed wooden door you can't walk through. */}
-      <mesh position={[0, 2.6, 0]}>
-        <boxGeometry args={[6.8, 5.2, 0.3]} />
-        <meshStandardMaterial color="#8d6440" flatShading />
-      </mesh>
-      <RigidBody type="fixed" colliders={false}>
-        <CuboidCollider args={[5, 3.5, 0.8]} position={[0, 3.5, 0]} />
-      </RigidBody>
-      <mesh position={[0, 0.05, 3]} rotation={[-Math.PI / 2, 0, 0]}>
-        <circleGeometry args={[1.6, 8]} />
-        <meshStandardMaterial color="#e2b04a" emissive="#e2b04a" emissiveIntensity={0.4} flatShading />
-      </mesh>
-    </group>
-  )
+/** Visitors look into every open exhibit from the walkway beside it. */
+function ZooVisitors() {
+  const captured = useGame((s) => s.captured)
+  const spots: ViewingSpot[] = PLOTS.filter((p) => (captured[p.creatureId] ?? 0) > 0).map((p) => ({
+    x: p.x,
+    z: p.precinct.center[1] + p.sz * 1.8,
+    // Face into the plot (towards +z or −z from the walkway).
+    facing: p.sz > 0 ? 0 : Math.PI,
+    node: PRECINCT_NODE[p.precinct.id],
+  }))
+  return <Visitors spots={spots} />
+}
+
+/** Bushland on the slopes between precincts, with a dense tree line beyond the walls. */
+function Bushland() {
+  const props = useMemo<PlacedProp[]>(() => {
+    const rng = mulberry32(99)
+    const out: PlacedProp[] = []
+    let tries = 0
+    while (out.length < 170 && tries++ < 4000) {
+      const x = range(rng, BOUNDS.minX, BOUNDS.maxX)
+      const z = range(rng, BOUNDS.minZ, BOUNDS.maxZ)
+      if (!isOpenGround(x, z)) continue
+      const r = rng()
+      out.push({ kind: r < 0.45 ? 'oak' : r < 0.7 ? 'pine' : 'bush', x, z, y: hubHeight(x, z) - 0.05, scale: range(rng, 0.7, 1.3), rot: rng() * 6.28, tint: rng() - 0.5 })
+    }
+    // Tree line beyond the north and east walls (the harbour bounds the south and west).
+    for (let i = 0; i < 90; i++) {
+      const north = rng() < 0.55
+      const x = north ? range(rng, BOUNDS.minX - 10, BOUNDS.maxX + 12) : BOUNDS.maxX + range(rng, 2, 14)
+      const z = north ? BOUNDS.minZ - range(rng, 2, 14) : range(rng, BOUNDS.minZ - 10, BOUNDS.maxZ)
+      out.push({ kind: rng() < 0.5 ? 'pine' : 'oak', x, z, y: hubHeight(x, z) - 0.05, scale: range(rng, 1, 1.6), rot: rng() * 6.28, tint: rng() - 0.5 })
+    }
+    return out
+  }, [])
+  return <PropField props={props} />
 }
 
 function ShopKiosk() {
   const openModal = useSession((s) => s.openModal)
-  useInteractable('shop', [9, 1.5, 32], 5, 'Browse the outfitter', () => openModal('shop'))
+  const y = padHeight(SHOP[0], SHOP[1])
+  useInteractable('shop', [SHOP[0] - 1.5, y + 1.5, SHOP[1]], 5, 'Browse the outfitter', () => openModal('shop'))
   return (
-    <group position={[10.5, 0, 32]} rotation={[0, -Math.PI / 2, 0]}>
+    <group position={[SHOP[0], y, SHOP[1]]} rotation={[0, -Math.PI / 2, 0]}>
       <mesh position={[0, 0.6, 0]} castShadow>
         <boxGeometry args={[4, 1.2, 1.4]} />
         <meshStandardMaterial color="#b35a3a" flatShading />
@@ -471,32 +519,9 @@ function ShopKiosk() {
   )
 }
 
-function Perimeter() {
-  const props = useMemo<PlacedProp[]>(() => {
-    const rng = mulberry32(99)
-    const out: PlacedProp[] = []
-    for (let i = 0; i < 110; i++) {
-      const side = Math.floor(rng() * 4)
-      const along = range(rng, -HALF - 4, HALF + 4)
-      const depth = HALF + range(rng, 1, 9)
-      const [x, z] = side === 0 ? [along, -depth] : side === 1 ? [along, depth] : side === 2 ? [-depth, along] : [depth, along]
-      out.push({ kind: rng() < 0.6 ? 'pine' : 'oak', x, z, scale: range(rng, 0.9, 1.4), rot: rng() * 6.28, tint: rng() - 0.5 })
-    }
-    // Decorative planting along the main path.
-    for (const z of [-40, -20, 20, 40]) {
-      for (const x of [-6, 6]) out.push({ kind: 'oak', x, z, scale: 0.7, rot: rng() * 6.28, tint: rng() - 0.5 })
-    }
-    for (let i = 0; i < 30; i++) {
-      out.push({ kind: 'bush', x: range(rng, -HALF, HALF), z: range(rng, 42, HALF - 2), scale: range(rng, 0.6, 1.1), rot: rng() * 6, tint: rng() - 0.5 })
-    }
-    return out
-  }, [])
-  return <PropField props={props} />
-}
-
 function Bench({ x, z, rot }: { x: number; z: number; rot: number }) {
   return (
-    <group position={[x, 0, z]} rotation={[0, rot, 0]}>
+    <group position={[x, padHeight(x, z), z]} rotation={[0, rot, 0]}>
       <mesh position={[0, 0.45, 0]} castShadow>
         <boxGeometry args={[1.8, 0.1, 0.5]} />
         <meshStandardMaterial color="#8d6440" flatShading />
@@ -516,54 +541,64 @@ function Bench({ x, z, rot }: { x: number; z: number; rot: number }) {
 }
 
 export function ZooHub() {
+  useMemo(() => {
+    terrain.height = hubHeight
+  }, [])
+  const spawnY = padHeight(SPAWN[0], SPAWN[1])
+  const { minX, maxX, minZ, maxZ } = BOUNDS
+  const cx = (minX + maxX) / 2
+  const cz = (minZ + maxZ) / 2
   return (
     <>
       <color attach="background" args={['#bfe0f0']} />
-      <fog attach="fog" args={['#bfe0f0', 40, 140]} />
+      <fog attach="fog" args={['#cfe3ee', 90, 420]} />
       <hemisphereLight args={['#dff1ff', '#4b5d33', 1.0]} />
       <directionalLight
-        position={[30, 50, 20]}
+        position={[-40, 60, 50]}
         intensity={2.3}
         color="#fff3dc"
         castShadow
         shadow-mapSize={[2048, 2048]}
-        shadow-camera-left={-70}
-        shadow-camera-right={70}
-        shadow-camera-top={70}
-        shadow-camera-bottom={-70}
+        shadow-camera-left={-90}
+        shadow-camera-right={90}
+        shadow-camera-top={90}
+        shadow-camera-bottom={-90}
+        shadow-camera-far={300}
       />
-      <Ground size={HALF * 2 + 40} colors={['#6a9a4a', '#73a352', '#629045', '#7aab58']} seed={7} />
-      <Paths />
-      <Fountain />
-      <ExpeditionGate />
+      <HubTerrain />
+      <Harbour />
+      <SkySafari />
       <ShopKiosk />
-      {/* Parked by the expedition gate, ready for a spin round the zoo. */}
-      <OwnedBuggy position={[8, 0.2, -38]} heading={Math.PI} />
+      <OwnedBuggy position={[BUGGY_PARK[0], padHeight(BUGGY_PARK[0], BUGGY_PARK[1]) + 0.4, BUGGY_PARK[1]]} heading={Math.PI} />
       <ZooVisitors />
-      <Bench x={-4.5} z={14} rot={Math.PI / 2} />
-      <Bench x={4.5} z={14} rot={-Math.PI / 2} />
-      <Bench x={-4.5} z={-14} rot={Math.PI / 2} />
-      <Bench x={4.5} z={-14} rot={-Math.PI / 2} />
-      <Sign
-        lines={[
-          { text: 'ZOO EXPLORER', size: 72, bold: true },
-          { text: 'Gate north · Outfitter right', size: 36, color: '#5a4630' },
-        ]}
-        position={[-3.5, 1.4, 38]}
-        rotation={[0, 0.4, 0]}
-        width={2.6}
-      />
+      {PRECINCTS.map((p) => (
+        <PrecinctHub key={p.id} precinct={p} />
+      ))}
       {PLOTS.map((p) => (
         <Exhibit key={p.creatureId} {...p} />
       ))}
-      <Perimeter />
+      <Bench x={-4.5} z={-46} rot={Math.PI / 2} />
+      <Bench x={4.5} z={-46} rot={-Math.PI / 2} />
+      <Sign
+        lines={[
+          { text: 'ZOO MAP', size: 72, bold: true },
+          { text: 'Rainforest Trail → east · African Savannah → west', size: 30, color: '#5a4630' },
+          { text: 'Expedition ferry ↓ at the harbour wharf', size: 30, color: '#5a4630' },
+        ]}
+        position={[6.5, spawnY + 1.5, NODES.plaza[1] + 4]}
+        rotation={[0, Math.PI + 0.7, 0]}
+        width={3}
+        height={1.4}
+      />
+      <Bushland />
       <RigidBody type="fixed" colliders={false}>
-        <CuboidCollider args={[HALF, 4, 1]} position={[0, 4, -HALF - 1]} />
-        <CuboidCollider args={[HALF, 4, 1]} position={[0, 4, HALF + 1]} />
-        <CuboidCollider args={[1, 4, HALF]} position={[-HALF - 1, 4, 0]} />
-        <CuboidCollider args={[1, 4, HALF]} position={[HALF + 1, 4, 0]} />
+        <CuboidCollider args={[(maxX - minX) / 2, 20, 1]} position={[cx, 10, minZ - 1]} />
+        <CuboidCollider args={[(maxX - minX) / 2, 20, 1]} position={[cx, 10, maxZ + 1]} />
+        <CuboidCollider args={[1, 20, (maxZ - minZ) / 2]} position={[minX - 1, 10, cz]} />
+        <CuboidCollider args={[1, 20, (maxZ - minZ) / 2]} position={[maxX + 1, 10, cz]} />
       </RigidBody>
-      <Player spawn={[0, 1.2, 44]} yaw={0} />
+      {/* Arrive at the Main Entrance, looking down the hill towards the harbour. */}
+      <Player spawn={[SPAWN[0], spawnY + 1.2, SPAWN[1]]} yaw={Math.PI} />
     </>
   )
 }

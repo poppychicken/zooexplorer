@@ -7,10 +7,12 @@ import { Sign } from './Sign'
 import { useGame } from '../game/state/store'
 import { formatPrice, ticketPrice, visitorsPerMinute } from '../game/systems/economy'
 import { mulberry32, range } from '../game/systems/rng'
+import { terrain } from '../game/systems/world'
+import { BOOTH, ENTRANCE, NODES, padHeight, route } from '../scenes/hub/layout'
 
 /**
- * Cosmetic crowd for the zoo hub. Visitors walk in from the south entrance, pay at the
- * ticket booth and wander between open exhibits. Money itself is credited by the economy
+ * Cosmetic crowd for the zoo hub. Visitors come in through the Main Entrance at the top of
+ * the hill, pay at the ticket booth and follow the footpaths between open exhibits. Money itself is credited by the economy
  * tick (visitors/min × ticket price) so offline earnings stay consistent; each visitor
  * shows the ticket price as they pay, at the same average rate.
  */
@@ -20,14 +22,17 @@ export interface ViewingSpot {
   z: number
   /** Direction to face while looking into the enclosure. */
   facing: number
+  /** Path-network node of the precinct this spot belongs to. */
+  node: string
 }
 
-const ENTRANCE_Z = 58
-const BOOTH: [number, number] = [-2.6, 51]
 const SKIN = ['#f1c9a5', '#e0ac69', '#c68642', '#8d5524', '#ffdbac']
 const SHIRT = ['#d84c3c', '#3c7ad8', '#e2b04a', '#5aa469', '#9b59b6', '#f2efe6', '#e67e22', '#2c3e50']
 const PANTS = ['#2c3e50', '#4a4a4a', '#6b4a2e', '#34495e', '#7f8c8d']
 const HAIR = ['#2b1d10', '#5a3d28', '#d9b380', '#111111', '#a0522d']
+
+/** Visitors appear (and leave) on the road just outside the Main Entrance. */
+const OUTSIDE: [number, number] = [ENTRANCE[0], ENTRANCE[1] - 9]
 
 interface Plan {
   points: [number, number][]
@@ -37,21 +42,7 @@ interface Plan {
   faces: (number | null)[]
 }
 
-/** Walk lane down the main path, stepping round the fountain in the plaza. */
-function laneTo(from: [number, number], toZ: number, laneX: number): [number, number][] {
-  const out: [number, number][] = []
-  const crosses = (from[1] > 3 && toZ < 3) || (from[1] < -3 && toZ > -3)
-  if (crosses) {
-    const side = laneX >= 0 ? 1 : -1
-    const dir = toZ < from[1] ? -1 : 1
-    out.push([side * 4.6, -dir * 3.5], [side * 4.6, dir * 3.5])
-  }
-  out.push([laneX, toZ])
-  return out
-}
-
 function makePlan(rng: () => number, spots: ViewingSpot[], startInside: boolean): Plan {
-  const laneX = range(rng, -2.4, 2.4)
   const points: [number, number][] = []
   const pauses: number[] = []
   const faces: (number | null)[] = []
@@ -60,22 +51,31 @@ function makePlan(rng: () => number, spots: ViewingSpot[], startInside: boolean)
     pauses.push(pause)
     faces.push(face)
   }
-  if (!startInside) {
-    add([range(rng, -1.5, 1.5), ENTRANCE_Z])
-    add([BOOTH[0] + 1.3, BOOTH[1]], 1.6, -Math.PI / 2) // facing the booth window (west)
+  // Walk a little off the centre line so groups don't march single file.
+  const lane = range(rng, -0.9, 0.9)
+  const walk = (from: string, to: string) => {
+    for (const [x, z] of route(from, to).slice(1)) add([x + lane, z + lane])
   }
-  let at: [number, number] = startInside ? [laneX, range(rng, -30, 40)] : [laneX, BOOTH[1]]
-  if (startInside) add(at)
+  let at = 'plaza'
+  if (startInside) {
+    at = spots[Math.floor(rng() * spots.length)].node
+    add(NODES[at])
+  } else {
+    add([OUTSIDE[0] + range(rng, -1.5, 1.5), OUTSIDE[1]])
+    add(ENTRANCE)
+    add([BOOTH[0] + 1.3, BOOTH[1]], 1.6, -Math.PI / 2) // facing the booth window (west)
+    add(NODES.plaza)
+  }
   const stops = 1 + Math.floor(rng() * 3)
   for (let i = 0; i < stops && spots.length; i++) {
     const spot = spots[Math.floor(rng() * spots.length)]
-    for (const p of laneTo(at, spot.z, laneX)) add(p)
-    add([spot.x, spot.z + range(rng, -3.5, 3.5)], range(rng, 4, 9), spot.facing)
-    add([laneX, spot.z])
-    at = [laneX, spot.z]
+    walk(at, spot.node)
+    add([spot.x + range(rng, -3, 3), spot.z], range(rng, 4, 9), spot.facing)
+    add(NODES[spot.node])
+    at = spot.node
   }
-  for (const p of laneTo(at, ENTRANCE_Z - 4, laneX)) add(p)
-  add([range(rng, -1.5, 1.5), ENTRANCE_Z + 1])
+  walk(at, 'entrance')
+  add([OUTSIDE[0] + range(rng, -1.5, 1.5), OUTSIDE[1]])
   return { points, pauses, faces }
 }
 
@@ -137,7 +137,7 @@ function Visitor({
       if (d < 0.15) {
         s.wait = plan.pauses[s.i]
         // The booth stop is where the ticket is paid.
-        if (!startInside && s.i === 1) onPay()
+        if (!startInside && s.i === 2) onPay()
         s.i++
       } else {
         const step = Math.min(d, look.speed * dt)
@@ -153,7 +153,7 @@ function Visitor({
     const swing = moving ? Math.sin(s.phase) * 0.6 : 0
     legs.current.forEach((l, k) => l && (l.rotation.x = k ? -swing : swing))
     arms.current.forEach((a, k) => a && (a.rotation.x = k ? swing * 0.7 : -swing * 0.7))
-    g.position.set(s.x, 0, s.z)
+    g.position.set(s.x, terrain.height(s.x, s.z), s.z)
     g.rotation.y = s.heading
   })
 
@@ -211,7 +211,7 @@ function TicketBooth({ popups }: { popups: Popup[] }) {
   const price = ticketPrice(captured)
   const open = price > 0
   return (
-    <group position={[BOOTH[0], 0, BOOTH[1]]}>
+    <group position={[BOOTH[0], padHeight(BOOTH[0], BOOTH[1]), BOOTH[1]]}>
       <mesh position={[-0.6, 1.3, 0]} castShadow>
         <boxGeometry args={[1.8, 2.6, 2.2]} />
         <meshStandardMaterial color="#e7d3a6" flatShading />
@@ -253,7 +253,7 @@ function TicketBooth({ popups }: { popups: Popup[] }) {
 
 function EntranceArch() {
   return (
-    <group position={[0, 0, 54.5]}>
+    <group position={[ENTRANCE[0], padHeight(ENTRANCE[0], ENTRANCE[1]), ENTRANCE[1]]}>
       {[-4.4, 4.4].map((x) => (
         <mesh key={x} position={[x, 2.2, 0]} castShadow>
           <boxGeometry args={[0.7, 4.4, 0.7]} />
