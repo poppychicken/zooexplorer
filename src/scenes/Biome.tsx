@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useFrame } from '@react-three/fiber'
-import { BallCollider, CuboidCollider, RigidBody, interactionGroups, type RapierRigidBody } from '@react-three/rapier'
+import { BallCollider, RigidBody, interactionGroups, type RapierRigidBody } from '@react-three/rapier'
 import { Color, Group, InstancedMesh, Object3D, Vector3 } from 'three'
 import { Ground } from '../components/Ground'
 import { Player } from '../components/Player'
 import { Bounds, PropField, type PlacedProp } from '../components/Props'
 import { Sign } from '../components/Sign'
 import { Creature } from '../components/Creature'
+import { OwnedBuggy } from '../components/Buggy'
 import { BIOME_BY_ID, type BiomeDef } from '../game/data/biomes'
 import { CREATURE_BY_ID, type BiomeId } from '../game/data/creatures'
 import { useSession } from '../game/state/store'
@@ -299,46 +300,6 @@ function Lair({ biome }: { biome: BiomeDef }) {
   )
 }
 
-function Buggy({ position }: { position: [number, number, number] }) {
-  return (
-    <group position={position} rotation={[0, 0.6, 0]}>
-      <mesh position={[0, 0.9, 0]} castShadow>
-        <boxGeometry args={[1.8, 0.5, 3]} />
-        <meshStandardMaterial color="#e0702c" flatShading />
-      </mesh>
-      <mesh position={[0, 1.5, -0.2]}>
-        <boxGeometry args={[1.6, 0.06, 1.6]} />
-        <meshStandardMaterial color="#333" flatShading />
-      </mesh>
-      {[
-        [-0.75, 1.2, 0.5],
-        [0.75, 1.2, 0.5],
-        [-0.75, 1.2, -0.9],
-        [0.75, 1.2, -0.9],
-      ].map((p, i) => (
-        <mesh key={i} position={p as [number, number, number]}>
-          <boxGeometry args={[0.08, 0.6, 0.08]} />
-          <meshStandardMaterial color="#333" />
-        </mesh>
-      ))}
-      {[
-        [-1, 0.45, 1],
-        [1, 0.45, 1],
-        [-1, 0.45, -1],
-        [1, 0.45, -1],
-      ].map((p, i) => (
-        <mesh key={i} position={p as [number, number, number]} rotation={[0, 0, Math.PI / 2]} castShadow>
-          <cylinderGeometry args={[0.45, 0.45, 0.35, 8]} />
-          <meshStandardMaterial color="#222" flatShading />
-        </mesh>
-      ))}
-      <RigidBody type="fixed" colliders={false}>
-        <CuboidCollider args={[1.1, 0.8, 1.6]} position={[0, 0.8, 0]} />
-      </RigidBody>
-    </group>
-  )
-}
-
 function ReturnSign({ biome }: { biome: BiomeDef }) {
   const goTo = useSession((s) => s.goTo)
   const [sx, , sz] = spawnPoint(biome)
@@ -352,11 +313,16 @@ function HuntControls() {
   useEffect(() => {
     const offKey = onKeyPress((code) => {
       const s = useSession.getState()
-      if (code === 'KeyQ' && s.locked && !s.modal) dropBait()
+      if (code === 'KeyQ' && s.locked && !s.modal) {
+        if (s.driving) s.toast('Get out of the buggy (E) to place bait.', 'info')
+        else dropBait()
+      }
     })
     const offClick = onLockedClick(() => {
       const s = useSession.getState()
-      if (!s.modal) throwNet()
+      if (s.modal) return
+      if (s.driving) s.toast('Get out of the buggy (E) to throw a net.', 'info')
+      else throwNet()
     })
     return () => {
       offKey()
@@ -402,7 +368,8 @@ export function Biome({ biomeId }: { biomeId: BiomeId }) {
       <Bounds half={h} />
       <Lair biome={biome} />
       <ReturnSign biome={biome} />
-      {biome.id === 'canyon' && <Buggy position={[spawn[0] - 4, 0, spawn[2] + 3]} />}
+      {/* Parked facing into the biome, next to where you arrive. */}
+      <OwnedBuggy position={[spawn[0] - 4.5, 0.2, spawn[2] - 1]} heading={Math.PI} />
       <Tracks />
       <Baits />
       <Nets />

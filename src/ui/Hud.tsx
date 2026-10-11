@@ -4,7 +4,7 @@ import { formatMoney, formatPrice, incomePerMinute, ticketPrice, visitorsPerMinu
 import { NETS } from '../game/data/shop'
 import { BIOME_BY_ID } from '../game/data/biomes'
 import { CREATURE_BY_ID, RARITY_COLOR } from '../game/data/creatures'
-import { baits, creatures, player } from '../game/systems/world'
+import { baits, creatures, player, vehicle } from '../game/systems/world'
 
 function Money() {
   const money = useGame((s) => s.money)
@@ -79,6 +79,33 @@ function Equipment() {
       <div className="slot hint">
         <kbd>E</kbd> Return sign · <kbd>Tab</kbd> Journal · <kbd>Shift</kbd> Sprint
       </div>
+    </div>
+  )
+}
+
+/** Speedometer and controls while driving the buggy. */
+function DrivingHud() {
+  const speedRef = useRef<HTMLSpanElement>(null)
+  useEffect(() => {
+    let raf = 0
+    const tick = () => {
+      raf = requestAnimationFrame(tick)
+      if (speedRef.current) speedRef.current.textContent = String(Math.round(Math.abs(vehicle.speed) * 3.6))
+    }
+    tick()
+    return () => cancelAnimationFrame(raf)
+  }, [])
+  return (
+    <div className="equipment">
+      <div className="slot speedo">
+        <span ref={speedRef}>0</span> km/h
+      </div>
+      <div className="slot hint">
+        <kbd>W</kbd>
+        <kbd>S</kbd> drive · <kbd>A</kbd>
+        <kbd>D</kbd> steer · <kbd>Shift</kbd> boost · <kbd>E</kbd> get out
+      </div>
+      <div className="slot hint">The engine scares creatures from twice as far. Park and walk to hunt.</div>
     </div>
   )
 }
@@ -173,6 +200,7 @@ export function Hud() {
   const locked = useSession((s) => s.locked)
   const modal = useSession((s) => s.modal)
   const tracker = useGame((s) => s.owned.tracker)
+  const driving = useSession((s) => s.driving)
   const inBiome = location.kind === 'biome'
   return (
     <div className="hud">
@@ -181,7 +209,7 @@ export function Hud() {
       <Toasts />
       {locked && !modal && <div className="crosshair" />}
       {locked && !modal && <Prompt />}
-      {inBiome && <Equipment />}
+      {driving ? <DrivingHud /> : inBiome && <Equipment />}
       {inBiome && <SoundLog />}
       {inBiome && tracker && <Radar />}
     </div>

@@ -15,6 +15,16 @@ export const player = {
   teleport: (_x: number, _z: number, _yaw?: number) => {},
 }
 
+/** The drivable buggy in the current scene, if there is one. */
+export const vehicle = {
+  /** Where the driver sits, in world space. */
+  seat: new Vector3(),
+  heading: 0,
+  /** Change in heading during the last frame, so the driver's view turns with the car. */
+  turned: 0,
+  speed: 0,
+}
+
 export type CreatureMode = 'wander' | 'flee' | 'toBait' | 'eating' | 'calm' | 'captured' | 'struggling'
 
 export interface CreatureRuntime {

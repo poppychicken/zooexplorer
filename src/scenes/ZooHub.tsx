@@ -8,6 +8,7 @@ import { PropField, type PlacedProp } from '../components/Props'
 import { Sign } from '../components/Sign'
 import { CreatureModel } from '../components/CreatureModel'
 import { Visitors } from '../components/Visitors'
+import { OwnedBuggy } from '../components/Buggy'
 import { CREATURES, type CreatureDef, type Rarity } from '../game/data/creatures'
 import { BIOME_BY_ID } from '../game/data/biomes'
 import { useGame, useSession } from '../game/state/store'
@@ -536,6 +537,8 @@ export function ZooHub() {
       <Fountain />
       <ExpeditionGate />
       <ShopKiosk />
+      {/* Parked by the expedition gate, ready for a spin round the zoo. */}
+      <OwnedBuggy position={[8, 0.2, -38]} heading={Math.PI} />
       <ZooVisitors />
       <Bench x={-4.5} z={14} rot={Math.PI / 2} />
       <Bench x={4.5} z={14} rot={-Math.PI / 2} />

@@ -158,6 +158,8 @@ interface Session {
   started: boolean
   modal: Modal
   locked: boolean
+  /** True while the player is driving the buggy. */
+  driving: boolean
   prompt: string | null
   basicBait: number
   toasts: Toast[]
@@ -167,6 +169,7 @@ interface Session {
   openModal: (m: Modal) => void
   closeModal: () => void
   setLocked: (v: boolean) => void
+  setDriving: (v: boolean) => void
   setPrompt: (p: string | null) => void
   toast: (text: string, tone?: Toast['tone']) => void
   logSound: (text: string) => void
@@ -182,6 +185,7 @@ export const useSession = create<Session>()((set, get) => ({
   started: false,
   modal: 'pause',
   locked: false,
+  driving: false,
   prompt: null,
   basicBait: 0,
   toasts: [],
@@ -193,6 +197,7 @@ export const useSession = create<Session>()((set, get) => ({
       visit: get().visit + 1,
       modal: null,
       prompt: null,
+      driving: false,
       soundLog: [],
       basicBait: location.kind === 'biome' ? BASIC_BAIT_PER_EXPEDITION : 0,
     }),
@@ -202,6 +207,7 @@ export const useSession = create<Session>()((set, get) => ({
   },
   closeModal: () => set({ modal: null }),
   setLocked: (locked) => set({ locked }),
+  setDriving: (driving) => set({ driving }),
   setPrompt: (prompt) => {
     if (get().prompt !== prompt) set({ prompt })
   },

@@ -4,7 +4,7 @@ import { CapsuleCollider, RigidBody, interactionGroups, useRapier, type RapierRi
 import { Euler, Vector3 } from 'three'
 import { consumeLook, isDown, onKeyPress } from '../game/systems/input'
 import { findFocus } from '../game/systems/interact'
-import { player } from '../game/systems/world'
+import { player, vehicle } from '../game/systems/world'
 import { useGame, useSession } from '../game/state/store'
 
 const WALK = 5
@@ -34,13 +34,23 @@ export function Player({ spawn, yaw = 0 }: { spawn: [number, number, number]; ya
     }
   }, [yaw])
 
+  /** Step out on the driver's side of the buggy. */
+  const exitVehicle = () => {
+    const side = new Vector3(Math.cos(vehicle.heading), 0, -Math.sin(vehicle.heading)).multiplyScalar(1.9)
+    body.current?.setTranslation({ x: vehicle.seat.x + side.x, y: vehicle.seat.y, z: vehicle.seat.z + side.z }, true)
+    useSession.getState().setDriving(false)
+  }
+
   useEffect(
     () =>
       onKeyPress((code) => {
         const s = useSession.getState()
         if (s.modal || !s.locked) return
         if (code === 'Space') jumpQueued.current = true
-        if (code === 'KeyE') findFocus(player.eye, player.forward)?.onInteract()
+        if (code === 'KeyE') {
+          if (s.driving) exitVehicle()
+          else findFocus(player.eye, player.forward)?.onInteract()
+        }
       }),
     [],
   )
@@ -52,6 +62,8 @@ export function Player({ spawn, yaw = 0 }: { spawn: [number, number, number]; ya
     const active = session.locked && !session.modal
 
     const [dx, dy] = consumeLook()
+    // The view turns with the buggy while driving.
+    if (session.driving) player.yaw += vehicle.turned
     if (active) {
       const sens = LOOK_SPEED * useGame.getState().mouseSensitivity
       player.yaw -= dx * sens
@@ -73,6 +85,17 @@ export function Player({ spawn, yaw = 0 }: { spawn: [number, number, number]; ya
     }
     const speed = isDown('ShiftLeft') || isDown('ShiftRight') ? SPRINT : WALK
     if (move.lengthSq() > 0) move.normalize().multiplyScalar(speed)
+
+    if (session.driving) {
+      // Ride along in the driver's seat.
+      rb.setTranslation(vehicle.seat, true)
+      rb.setLinvel({ x: 0, y: 0, z: 0 }, true)
+      player.position.copy(vehicle.seat)
+      camera.position.set(vehicle.seat.x, vehicle.seat.y + EYE, vehicle.seat.z)
+      player.eye.copy(camera.position)
+      session.setPrompt(active ? 'Get out of the buggy' : null)
+      return
+    }
 
     const vel = rb.linvel()
     let vy = vel.y

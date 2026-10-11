@@ -28,6 +28,8 @@ const DETECT: Record<CreatureDef['rarity'], number> = { common: 10, uncommon: 13
 
 export function detectionRadius(def: CreatureDef): number {
   const base = DETECT[def.rarity] * (def.placeholder.ears === 'huge' ? 1.3 : 1)
+  // The buggy's engine carries furthest; sprinting footsteps come next.
+  if (useSession.getState().driving) return base * 2
   const sprinting = isDown('ShiftLeft') || isDown('ShiftRight')
   return base * (sprinting ? 1.5 : 1)
 }
