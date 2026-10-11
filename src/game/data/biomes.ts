@@ -50,12 +50,12 @@ export const BIOMES: BiomeDef[] = [
     sun: { color: '#fff1d6', intensity: 2.2, position: [40, 60, 20] },
     ambient: { sky: '#cfe6ff', ground: '#3a4a2a', intensity: 0.9 },
     props: [
-      { kind: 'pine', count: 140, minScale: 0.8, maxScale: 1.5 },
-      { kind: 'oak', count: 70, minScale: 0.8, maxScale: 1.3 },
-      { kind: 'bush', count: 120, minScale: 0.6, maxScale: 1.2 },
+      { kind: 'pine', count: 300, minScale: 0.8, maxScale: 1.6 },
+      { kind: 'oak', count: 130, minScale: 0.8, maxScale: 1.4 },
+      { kind: 'bush', count: 260, minScale: 0.6, maxScale: 1.3 },
       { kind: 'rock', count: 50, minScale: 0.5, maxScale: 1.4 },
       { kind: 'log', count: 20, minScale: 0.8, maxScale: 1.2 },
-      { kind: 'mushroom', count: 40, minScale: 0.6, maxScale: 1.2 },
+      { kind: 'mushroom', count: 80, minScale: 0.6, maxScale: 1.2 },
     ],
     population: 10,
     spawns: [

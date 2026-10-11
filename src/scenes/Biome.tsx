@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useFrame } from '@react-three/fiber'
-import { BallCollider, CuboidCollider, RigidBody, type RapierRigidBody } from '@react-three/rapier'
+import { BallCollider, CuboidCollider, RigidBody, interactionGroups, type RapierRigidBody } from '@react-three/rapier'
 import { Color, Group, InstancedMesh, Object3D, Vector3 } from 'three'
 import { Ground } from '../components/Ground'
 import { Player } from '../components/Player'
@@ -195,6 +195,9 @@ function Baits() {
   )
 }
 
+/** Nets collide with everything except the player (group 0). */
+const NET_GROUPS = interactionGroups(1, [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15])
+
 function NetProjectile({ shot, onDone }: { shot: NetShot; onDone: (id: number) => void }) {
   const body = useRef<RapierRigidBody>(null)
   const mesh = useRef<Group>(null)
@@ -238,7 +241,7 @@ function NetProjectile({ shot, onDone }: { shot: NetShot; onDone: (id: number) =
         }
       }}
     >
-      <BallCollider args={[0.45]} />
+      <BallCollider args={[0.45]} collisionGroups={NET_GROUPS} />
       <group ref={mesh}>
         <mesh>
           <icosahedronGeometry args={[0.55, 1]} />

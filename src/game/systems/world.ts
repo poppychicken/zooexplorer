@@ -11,6 +11,8 @@ export const player = {
   forward: new Vector3(0, 0, -1),
   yaw: 0,
   pitch: 0,
+  /** Set by the active Player; moves the physics body. */
+  teleport: (_x: number, _z: number, _yaw?: number) => {},
 }
 
 export type CreatureMode = 'wander' | 'flee' | 'toBait' | 'eating' | 'calm' | 'captured' | 'struggling'

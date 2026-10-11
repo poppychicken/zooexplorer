@@ -31,6 +31,9 @@ export const MINIGAME = {
   maxStrikes: 3,
 } as const
 
+/** A full-tension release in the green banks this much progress, so at least two clean pulls are needed. */
+export const BANK_RATE = 0.55
+
 export interface MiniGameState {
   progress: number
   strikes: number
@@ -49,7 +52,7 @@ export function resolveRelease(
 ): { state: MiniGameState; hit: boolean } {
   const hit = Math.abs(marker - zoneCenter) <= zoneWidth / 2
   if (hit) {
-    return { hit, state: { ...state, progress: Math.min(1, state.progress + state.charge * 0.5), charge: 0 } }
+    return { hit, state: { ...state, progress: Math.min(1, state.progress + state.charge * BANK_RATE), charge: 0 } }
   }
   return {
     hit,

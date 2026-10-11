@@ -63,13 +63,14 @@ export function Sign({
         <boxGeometry args={[width, height, 0.08]} />
         <meshStandardMaterial color={border} flatShading />
       </mesh>
+      {/* Emissive so the text stays readable when the face is turned away from the sun. */}
       <mesh position={[0, 0, 0.045]}>
         <planeGeometry args={[width, height]} />
-        <meshStandardMaterial map={texture} />
+        <meshStandardMaterial map={texture} emissiveMap={texture} emissive="#ffffff" emissiveIntensity={0.45} />
       </mesh>
       <mesh position={[0, 0, -0.045]} rotation={[0, Math.PI, 0]}>
         <planeGeometry args={[width, height]} />
-        <meshStandardMaterial map={texture} />
+        <meshStandardMaterial map={texture} emissiveMap={texture} emissive="#ffffff" emissiveIntensity={0.45} />
       </mesh>
       {posts &&
         [-1, 1].map((s) => (

@@ -66,7 +66,7 @@ function Quadruped({ s, height, motion }: { s: PlaceholderStyle; height: number;
   const headZ = L * 0.5
   return (
     <group>
-      <mesh geometry={geo.ico} position={[0, bodyY, 0]} scale={[L * 0.2, L * 0.17, L * 0.42]} castShadow>
+      <mesh geometry={geo.ico} position={[0, bodyY, 0]} scale={[L * 0.2, L * 0.2, L * 0.42]} castShadow>
         <Mat color={s.body} />
       </mesh>
       <mesh geometry={geo.ico} position={[0, bodyY - L * 0.05, L * 0.2]} scale={[L * 0.15, L * 0.12, L * 0.18]}>
@@ -75,7 +75,7 @@ function Quadruped({ s, height, motion }: { s: PlaceholderStyle; height: number;
       {legPos.map(([x, z], i) => (
         <group key={i} position={[x * L, legH, z * L]} ref={(g) => void (legs.current[i] = g)}>
           <mesh geometry={geo.box} position={[0, -legH / 2, 0]} scale={[L * 0.07, legH, L * 0.07]} castShadow>
-            <Mat color={s.detail ?? s.body} />
+            <Mat color={s.legs ?? s.detail ?? s.body} />
           </mesh>
         </group>
       ))}

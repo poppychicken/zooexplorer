@@ -119,8 +119,9 @@ function ExhibitResident({ def, half }: { def: CreatureDef; half: number }) {
   )
 }
 
+const HABITAT_FLOOR: Record<CreatureDef['biome'], string> = { forest: '#4a6b34', canyon: '#d6a46c' }
+
 function Habitat({ def, seed }: { def: CreatureDef; seed: number }) {
-  const biome = BIOME_BY_ID[def.biome]
   const props = useMemo<PlacedProp[]>(() => {
     const rng = mulberry32(seed)
     const kinds = def.biome === 'forest' ? (['bush', 'rock', 'mushroom', 'log', 'bush'] as const) : (['rock', 'bush', 'rock', 'cactus'] as const)
@@ -135,9 +136,9 @@ function Habitat({ def, seed }: { def: CreatureDef; seed: number }) {
   }, [def.biome, seed])
   return (
     <>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.03, 0]} receiveShadow>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.08, 0]} receiveShadow>
         <planeGeometry args={[PLOT - 0.4, PLOT - 0.4]} />
-        <meshStandardMaterial color={biome.ground[0]} flatShading />
+        <meshStandardMaterial color={HABITAT_FLOOR[def.biome]} flatShading />
       </mesh>
       {/* Walk-through decor: the fence already keeps the player out. */}
       <PropField props={props} colliders={false} />
@@ -165,7 +166,8 @@ function Exhibit({ creatureId, x, z, facing }: (typeof PLOTS)[number]) {
   return (
     <group>
       <Fence x={x} z={z} size={PLOT} openSide={facing} />
-      <Sign lines={lines} position={[signX, 1.3, z]} rotation={[0, (facing * Math.PI) / 2, 0]} />
+      {/* Off to one side of the viewing spot so it doesn't block the enclosure. */}
+      <Sign lines={lines} position={[signX, 1.1, z + 4.2]} rotation={[0, (facing * Math.PI) / 2, 0]} width={2} height={1} />
       <group position={[x, 0, z]}>
         {open ? (
           <>
@@ -173,7 +175,7 @@ function Exhibit({ creatureId, x, z, facing }: (typeof PLOTS)[number]) {
             <ExhibitResident def={def} half={PLOT / 2 - 1.5} />
           </>
         ) : (
-          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]} receiveShadow>
+          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.08, 0]} receiveShadow>
             <planeGeometry args={[PLOT - 0.4, PLOT - 0.4]} />
             <meshStandardMaterial color="#8a7a5c" flatShading />
           </mesh>
@@ -186,24 +188,24 @@ function Exhibit({ creatureId, x, z, facing }: (typeof PLOTS)[number]) {
 function Paths() {
   const tiles: [number, number, number, number][] = [
     [0, -6, 8, 96], // main north-south path
-    [-12, -27, 10, 4],
-    [-12, -9, 10, 4],
-    [-12, 9, 10, 4],
-    [-12, 27, 10, 4],
-    [12, -27, 10, 4],
-    [12, -9, 10, 4],
-    [12, 9, 10, 4],
-    [12, 27, 10, 4],
+    [-10.5, -27, 7, 8],
+    [-10.5, -9, 7, 8],
+    [-10.5, 9, 7, 8],
+    [-10.5, 27, 7, 8],
+    [10.5, -27, 7, 8],
+    [10.5, -9, 7, 8],
+    [10.5, 9, 7, 8],
+    [10.5, 27, 7, 8],
   ]
   return (
     <>
       {tiles.map(([x, z, w, d], i) => (
-        <mesh key={i} position={[x, 0.04, z]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+        <mesh key={i} position={[x, 0.07, z]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
           <planeGeometry args={[w, d]} />
           <meshStandardMaterial color="#cdb894" flatShading />
         </mesh>
       ))}
-      <mesh position={[0, 0.05, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+      <mesh position={[0, 0.075, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
         <circleGeometry args={[7, 10]} />
         <meshStandardMaterial color="#d8c6a2" flatShading />
       </mesh>

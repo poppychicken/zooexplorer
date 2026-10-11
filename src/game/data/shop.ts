@@ -10,9 +10,9 @@ export interface NetDef {
 }
 
 export const NETS: Record<NetTier, NetDef> = {
-  1: { tier: 1, name: 'Net Mk I', multiplier: 1.0, greenZone: 0.16 },
-  2: { tier: 2, name: 'Net Mk II', multiplier: 1.4, greenZone: 0.24 },
-  3: { tier: 3, name: 'Net Mk III', multiplier: 1.9, greenZone: 0.34 },
+  1: { tier: 1, name: 'Net Mk I', multiplier: 1.0, greenZone: 0.18 },
+  2: { tier: 2, name: 'Net Mk II', multiplier: 1.4, greenZone: 0.26 },
+  3: { tier: 3, name: 'Net Mk III', multiplier: 1.9, greenZone: 0.36 },
 }
 
 export type ShopItemId = 'net_mk2' | 'net_mk3' | 'premium_bait' | 'tracker' | 'buggy'

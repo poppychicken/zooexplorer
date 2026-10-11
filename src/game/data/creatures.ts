@@ -10,8 +10,10 @@ export interface PlaceholderStyle {
   size: number
   body: string
   accent: string
-  /** Optional extra colour, e.g. glowing antlers or belly. */
+  /** Optional extra colour: legs/nose, or the glow on legendaries. */
   detail?: string
+  /** Leg colour when it differs from `detail`. */
+  legs?: string
   ears?: 'pointed' | 'huge' | 'round' | 'none'
   tail?: 'bushy' | 'short' | 'long' | 'none'
   antlers?: boolean
@@ -90,9 +92,9 @@ export const CREATURES: CreatureDef[] = [
     biome: 'forest',
     rarity: 'legendary',
     description: 'An ancient stag whose antlers grow glowing moss. Said to guard the oldest grove.',
-    placeholder: { shape: 'quadruped', size: 2.0, body: '#7a5236', accent: '#d8c7a8', detail: '#7dff9a', ears: 'pointed', tail: 'short', antlers: true, glow: true },
+    placeholder: { shape: 'quadruped', size: 2.0, body: '#7a5236', accent: '#d8c7a8', detail: '#7dff9a', legs: '#5a3d28', ears: 'pointed', tail: 'short', antlers: true, glow: true },
     call: 'bell',
-    height: 2.4,
+    height: 1.9,
   }),
   def({
     id: 'fennec_fox',

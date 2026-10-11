@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
-import { CapsuleCollider, RigidBody, useRapier, type RapierRigidBody } from '@react-three/rapier'
+import { CapsuleCollider, RigidBody, interactionGroups, useRapier, type RapierRigidBody } from '@react-three/rapier'
 import { Euler, Vector3 } from 'three'
 import { consumeLook, isDown, onKeyPress } from '../game/systems/input'
 import { findFocus } from '../game/systems/interact'
@@ -28,6 +28,10 @@ export function Player({ spawn, yaw = 0 }: { spawn: [number, number, number]; ya
     player.yaw = yaw
     player.pitch = 0
     consumeLook()
+    player.teleport = (x, z, newYaw) => {
+      body.current?.setTranslation({ x, y: 1.2, z }, true)
+      if (newYaw !== undefined) player.yaw = newYaw
+    }
   }, [yaw])
 
   useEffect(
@@ -101,7 +105,7 @@ export function Player({ spawn, yaw = 0 }: { spawn: [number, number, number]; ya
       friction={0}
       ccd
     >
-      <CapsuleCollider args={[0.55, 0.4]} friction={0} />
+      <CapsuleCollider args={[0.55, 0.4]} friction={0} collisionGroups={interactionGroups(0)} />
     </RigidBody>
   )
 }

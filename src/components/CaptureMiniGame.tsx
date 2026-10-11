@@ -66,11 +66,11 @@ export function CaptureMiniGame({ uid, creatureId }: { uid: number; creatureId: 
       if (!v.over) {
         // Erratic struggle: layered sines that speed up as the creature tires of being caught.
         const s = t / 1000
-        const agitation = 1 + v.progress * 1.2
+        const agitation = 1 + v.progress * 0.8
         const n =
-          Math.sin(s * 1.7 * agitation + seed) * 0.5 +
-          Math.sin(s * 3.1 * agitation + seed * 2) * 0.3 +
-          Math.sin(s * 6.3 * agitation + seed * 3) * 0.2
+          Math.sin(s * 1.3 * agitation + seed) * 0.55 +
+          Math.sin(s * 2.4 * agitation + seed * 2) * 0.3 +
+          Math.sin(s * 4.6 * agitation + seed * 3) * 0.15
         v.marker = 0.5 + n * 0.48
         if (v.holding) {
           v.charge = Math.min(1, v.charge + dt / MINIGAME.fillSeconds)
