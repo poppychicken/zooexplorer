@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { requestLock } from '../App'
-import { unlockAudio } from '../game/systems/audio'
+import { playUi, unlockAudio } from '../game/systems/audio'
 import { useGame, useSession } from '../game/state/store'
 import { BIOMES } from '../game/data/biomes'
 import { SHOP_ITEMS, SHOP_ITEM_BY_ID, NETS } from '../game/data/shop'
@@ -169,7 +169,10 @@ function Shop() {
                     disabled={!check.ok}
                     title={check.reason}
                     onClick={() => {
-                      if (buy(item.id)) toast(`Bought ${item.name}`, 'good')
+                      if (buy(item.id)) {
+                        playUi('buy')
+                        toast(`Bought ${item.name}`, 'good')
+                      }
                     }}
                   >
                     {check.ok ? 'Buy' : check.reason}
