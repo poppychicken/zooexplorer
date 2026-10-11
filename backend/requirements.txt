@@ -1,8 +1,0 @@
-fastapi==0.141.1
-uvicorn[standard]==0.52.0
-pydantic==2.13.4
-pydantic-settings==2.14.2
-# pymongo ships the async driver (AsyncMongoClient) since 4.13 — motor
-# reached EOL in May 2026 and is deliberately not used here.
-pymongo==4.17.0
-PyYAML==6.0.3
