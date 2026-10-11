@@ -1,0 +1,284 @@
+name: Bootstrap from setup form
+
+on:
+  issues:
+    types: [opened]
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
+jobs:
+  render:
+    name: Render placeholders from setup form
+    if: github.event.repository.is_template == false && startsWith(github.event.issue.title, '[setup]')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Skip if already bootstrapped
+        id: guard
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE: ${{ github.event.issue.number }}
+        run: |
+          if [ -f .platform/setup.json ]; then
+            gh issue comment "$ISSUE" --body "This repo is already bootstrapped (\`.platform/setup.json\` exists). Skipping. Delete the file and re-open a setup issue if you want to re-render."
+            gh issue close "$ISSUE"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "skip=false" >> "$GITHUB_OUTPUT"
+
+      - name: Acknowledge submission
+        if: steps.guard.outputs.skip == 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE: ${{ github.event.issue.number }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          gh issue comment "$ISSUE" --body "Bootstrap started — [watch progress in Actions]($RUN_URL).
+
+          **What's happening now:**
+          1. Validate the form input
+          2. Write \`.platform/setup.json\` (the structured payload for downstream provisioning)
+          3. Render \`{{PROJECT_NAME}}\` / \`{{MONGODB_DATABASE}}\` placeholders across the repo
+          4. Verify no un-rendered placeholders remain
+          5. Remove template-only files (\`docs/TEMPLATE_BOOTSTRAP.md\`)
+          6. Write \`.github/CODEOWNERS\` defaulting to the issue author
+          7. **Open a Pull Request** that bootstraps this repo into its own app
+
+          **What you do next:**
+          - Wait ~30 seconds for the workflow to finish — a comment will appear here with the PR link.
+          - Review and merge the PR. After merge, this repo is your app: build, iterate, deploy.
+          - This issue will be closed automatically when the PR merges.
+
+          If anything fails, the [workflow run]($RUN_URL) has the logs."
+
+      - name: Parse setup issue
+        if: steps.guard.outputs.skip == 'false'
+        id: parse
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const fs = require('fs');
+
+            // Project name derived from the repository name. Bootstrap form no
+            // longer collects it. Sanitize to the lowercase-hyphenated shape
+            // required for ECR repos, k8s resources, and downstream tooling.
+            const rawRepo = context.repo.repo;
+            const projectName = rawRepo
+              .toLowerCase()
+              .replace(/[^a-z0-9-]+/g, '-')
+              .replace(/-+/g, '-')
+              .replace(/^-+|-+$/g, '');
+
+            if (!/^[a-z][a-z0-9-]*$/.test(projectName)) {
+              core.setFailed(`Derived project name "${projectName}" (from repo "${rawRepo}") is not valid (must be lowercase, hyphenated, start with a letter).`);
+              return;
+            }
+
+            const description = '';
+            const targets = [{ name: 'us', region: 'us-east-1' }];
+            const envs = ['dev'];
+
+            const githubUser = context.payload.issue.user.login;
+            let email = `${githubUser}@swipejobs.com`;
+            try {
+              const { data: user } = await github.rest.users.getByUsername({ username: githubUser });
+              if (user.email) email = user.email;
+            } catch (e) {
+              core.warning(`Could not fetch user profile for ${githubUser}: ${e.message}`);
+            }
+
+            const setup = {
+              project: {
+                name: projectName,
+                description,
+                created_at: new Date().toISOString(),
+              },
+              owner: {
+                github: githubUser,
+                email,
+              },
+              deployment: {
+                targets,
+                environments: envs,
+              },
+              template: {
+                source: `${context.repo.owner}/${context.repo.repo}`,
+                rendered_from_issue: context.payload.issue.number,
+              },
+            };
+
+            fs.mkdirSync('.platform', { recursive: true });
+            fs.writeFileSync('.platform/setup.json', JSON.stringify(setup, null, 2) + '\n');
+
+            core.setOutput('project_name', projectName);
+            core.setOutput('mongo_db', projectName.replace(/-/g, '_') + '_db');
+            core.setOutput('owner_github', githubUser);
+
+      - name: Render placeholders
+        if: steps.guard.outputs.skip == 'false'
+        env:
+          PROJECT_NAME: ${{ steps.parse.outputs.project_name }}
+          MONGO_DB: ${{ steps.parse.outputs.mongo_db }}
+        run: |
+          set -euo pipefail
+          find . -type f \
+            -not -path './.git/*' \
+            -not -path './.github/workflows/*' \
+            -not -path './node_modules/*' \
+            -not -path './.platform/*' \
+            -not -path '*/__pycache__/*' \
+            -not -path '*/dist/*' \
+            -not -name 'bootstrap.yml' \
+            -not -name 'setup.yml' \
+            -print0 \
+            | while IFS= read -r -d '' f; do
+                if file "$f" | grep -q text; then
+                  sed -i "s|{{PROJECT_NAME}}|${PROJECT_NAME}|g" "$f"
+                  sed -i "s|{{MONGODB_DATABASE}}|${MONGO_DB}|g" "$f"
+                fi
+              done
+
+      - name: Remove template-only files
+        if: steps.guard.outputs.skip == 'false'
+        run: |
+          set -euo pipefail
+          rm -f docs/TEMPLATE_BOOTSTRAP.md
+          rmdir docs 2>/dev/null || true
+
+      - name: Validate rendering left no placeholders behind
+        if: steps.guard.outputs.skip == 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE: ${{ github.event.issue.number }}
+        run: |
+          set -euo pipefail
+          # Search rendered tree for surviving placeholders the renderer was
+          # supposed to substitute. Scope must match the sed step above:
+          # only {{PROJECT_NAME}} and {{MONGODB_DATABASE}} are bootstrap-time
+          # placeholders; anything else is deploy-time and intentionally left
+          # alone. File exclusions also mirror the renderer.
+          if matches=$(grep -rnE '\{\{(PROJECT_NAME|MONGODB_DATABASE)\}\}' . \
+              --exclude-dir=.git \
+              --exclude-dir=node_modules \
+              --exclude-dir=dist \
+              --exclude-dir=__pycache__ \
+              --exclude-dir=.platform \
+              --exclude-dir=workflows \
+              --exclude='package-lock.json' \
+              --exclude='bootstrap.yml' \
+              --exclude='setup.yml' \
+              2>/dev/null); then
+            {
+              echo "Bootstrap rendering left un-rendered placeholders. Failing before opening PR."
+              echo
+              echo "Offending lines:"
+              echo '```'
+              echo "$matches" | head -50
+              echo '```'
+              echo
+              echo "Fix the placeholder list in \`.github/workflows/bootstrap.yml\` (the sed step) or rename the placeholders in the offending files."
+            } > /tmp/render-fail.md
+            gh issue comment "$ISSUE" --body-file /tmp/render-fail.md
+            exit 1
+          fi
+          echo "All placeholders rendered."
+
+      - name: Write CODEOWNERS
+        if: steps.guard.outputs.skip == 'false'
+        env:
+          OWNER_GITHUB: ${{ steps.parse.outputs.owner_github }}
+        run: |
+          set -euo pipefail
+          mkdir -p .github
+          {
+            echo "# Auto-generated by bootstrap. Edit freely."
+            echo "* @${OWNER_GITHUB}"
+          } > .github/CODEOWNERS
+
+      - name: Open PR with rendered project
+        if: steps.guard.outputs.skip == 'false'
+        id: open-pr
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE: ${{ github.event.issue.number }}
+          PROJECT_NAME: ${{ steps.parse.outputs.project_name }}
+        run: |
+          set -euo pipefail
+          BRANCH="bootstrap/issue-${ISSUE}"
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$BRANCH"
+          git add -A
+          git commit -m "chore: bootstrap project from setup issue #${ISSUE}"
+          git push origin "$BRANCH"
+
+          PR_URL=$(gh pr create \
+            --title "Bootstrap: ${PROJECT_NAME}" \
+            --body "Renders placeholders and writes \`.platform/setup.json\` based on issue #${ISSUE}. Closes #${ISSUE}." \
+            --base main \
+            --head "$BRANCH")
+
+          gh issue comment "$ISSUE" --body "Bootstrap PR opened: ${PR_URL}"
+          echo "pr_url=${PR_URL}" >> "$GITHUB_OUTPUT"
+
+      # ── Cross-repo dispatch to platform-gitops ────────────────────
+      # Mints a short-lived installation token for the backend-service-config-app
+      # GitHub App (creds distributed via org secrets BOOTSTRAP_APP_ID +
+      # BOOTSTRAP_APP_PRIVATE_KEY, managed in pulumi/github_repositories) and
+      # fires a `selfserve-app-register` repository_dispatch event into
+      # platform-gitops with the bootstrap setup payload. The gitops
+      # repo's receiver workflow (Phase 4) will pick this up and open an
+      # Argo CD registration PR.
+      #
+      # Degrades gracefully: if the org secrets are missing or the App can't
+      # mint a token, the bootstrap PR is still produced and the issue gets a
+      # comment explaining the dispatch was skipped.
+      - name: Mint App token for gitops dispatch
+        if: steps.guard.outputs.skip == 'false'
+        id: app-token
+        uses: actions/create-github-app-token@v1
+        continue-on-error: true
+        with:
+          app-id: ${{ secrets.BOOTSTRAP_APP_ID }}
+          private-key: ${{ secrets.BOOTSTRAP_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: platform-gitops
+
+      - name: Dispatch selfserve-app-register
+        if: steps.guard.outputs.skip == 'false' && steps.app-token.outputs.token != ''
+        id: dispatch
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          SOURCE_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          PAYLOAD=$(jq -nc \
+            --slurpfile s .platform/setup.json \
+            --arg source_repo "$SOURCE_REPO" \
+            --argjson issue "$ISSUE_NUMBER" \
+            '{event_type: "selfserve-app-register",
+              client_payload: ($s[0] + {source_repo: $source_repo,
+                                        triggered_by_issue: $issue})}')
+          echo "$PAYLOAD" \
+            | gh api "repos/${GITHUB_REPOSITORY_OWNER}/platform-gitops/dispatches" --input -
+          echo "dispatched=true" >> "$GITHUB_OUTPUT"
+
+      - name: Comment dispatch result on issue
+        if: steps.guard.outputs.skip == 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE: ${{ github.event.issue.number }}
+          DISPATCHED: ${{ steps.dispatch.outputs.dispatched }}
+        run: |
+          set -euo pipefail
+          if [ "$DISPATCHED" = "true" ]; then
+            gh issue comment "$ISSUE" --body "Dispatched \`selfserve-app-register\` to \`platform-gitops\`. The Argo CD registration PR will appear shortly. Once both PRs are merged, your app deploys on the next Argo sync."
+          else
+            gh issue comment "$ISSUE" --body "⚠️ Skipped the gitops dispatch — could not mint an App installation token. This usually means the org secrets \`BOOTSTRAP_APP_ID\` and \`BOOTSTRAP_APP_PRIVATE_KEY\` are missing, or the \`backend-service-config-app\` App's installation does not include this repo. Your bootstrap PR is still ready to merge; you'll just need to add the Argo CD registration manually (or rerun bootstrap once the org secrets are in place)."
+          fi

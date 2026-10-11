@@ -1,0 +1,6 @@
+# actionlint config. Without this, actionlint rejects `runs-on: github-action`
+# — the self-hosted runner label every AWS/ECR job in this repo uses — because
+# it only knows GitHub's own hosted labels.
+self-hosted-runner:
+  labels:
+    - github-action

@@ -1,0 +1,21 @@
+name: Project Setup
+description: Initialize this project from the template
+title: "[setup] Initialize project"
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Submit this issue to bootstrap the repo. The workflow will:
+        - Derive the project name from this repository's name
+        - Default deployment target to `us-east-1` and environment to `dev`
+        - Write `.platform/setup.json` (structured payload for downstream provisioning)
+        - Render placeholders and open a PR with the rendered project
+
+        Owner identity (GitHub username + email) is captured automatically from this issue's author.
+  - type: checkboxes
+    id: confirm
+    attributes:
+      label: Confirm
+      options:
+        - label: Start bootstrap
+          required: true

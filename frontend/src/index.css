@@ -1,0 +1,12 @@
+/* Tailwind v4, Preflight deliberately omitted: Ant Design ships its own
+   reset and Preflight would fight it. Importing theme + utilities only is
+   the documented way to opt out. */
+@layer theme, base, components, utilities;
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities);
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background-color: #f5f5f5;
+}

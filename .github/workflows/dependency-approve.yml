@@ -1,0 +1,21 @@
+name: Dependency auto-approve
+
+# Thin caller. The gate (Renovate-authored PRs marked automerge only), the
+# devops-bot-sj approval and the OpenBao token mint all live in ci-templates:
+# .github/workflows/shared-dependency-approve.yml. Renovate merges once pr.yml
+# is green; this only clears the one-approval org ruleset that otherwise
+# stalls it. `synchronize` is needed: the ruleset dismisses stale reviews when
+# Renovate rebases.
+on:
+  pull_request:
+    types: [opened, reopened, synchronize]
+
+# A called workflow can never exceed the caller job's grant, and a missing one
+# is a startup_failure with no error in the API.
+permissions:
+  contents: read
+  id-token: write   # OpenBao OIDC login for the App token
+
+jobs:
+  approve:
+    uses: swipejobs/ci-templates/.github/workflows/shared-dependency-approve.yml@main
