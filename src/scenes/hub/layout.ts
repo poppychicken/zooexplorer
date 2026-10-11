@@ -26,7 +26,7 @@ export interface Precinct {
 
 /** Each expedition biome is exhibited in one precinct; the rest are reserved for future biomes. */
 export const PRECINCTS: Precinct[] = [
-  { id: 'rainforest-trail', name: 'Rainforest Trail', subtitle: 'Temperate Forest expeditions', center: [34, 2], biome: 'forest', ground: '#3f6a32' },
+  { id: 'rainforest-trail', name: 'Rainforest Trail', subtitle: 'Temperate Forest expeditions', center: [36, -2], biome: 'forest', ground: '#3f6a32' },
   { id: 'african-savannah', name: 'African Savannah', subtitle: 'Arid Canyon expeditions · harbour views', center: [-32, 6], biome: 'canyon', ground: '#b9a064' },
   { id: 'nura-diya', name: 'Nura Diya Australia', subtitle: 'Outback Scrub expeditions', center: [-30, -42], biome: 'outback', ground: '#a9643a' },
   { id: 'tiger-trek', name: 'Tiger Trek', subtitle: 'Mountain expeditions · Himalayan highlands', center: [32, -42], biome: 'mountain', ground: '#7d8a74' },
@@ -48,20 +48,21 @@ export const SKY_SAFARI = { top: [-15, -60] as [number, number], bottom: [-24, 4
 // --- Footpaths -----------------------------------------------------------
 
 /** Path network: visitors route along it and the terrain is painted with it. */
-export const NODES: Record<string, [number, number]> = {
+/** Junctions of the path network. Precinct nodes sit on the crossroads in the middle of each precinct. */
+const JUNCTIONS: Record<string, [number, number]> = {
   entrance: ENTRANCE,
   plaza: [0, -50],
   nuraDiya: [-30, -42],
   tigerTrek: [32, -42],
   mid: [0, -14],
-  rainforest: [34, 2],
+  rainforest: [36, -2],
   savannah: [-32, 6],
   lower: [2, 26],
   oceans: [26, 38],
   wharf: [-6, 46],
 }
 
-export const EDGES: [string, string][] = [
+const ROUTES: [string, string][] = [
   ['entrance', 'plaza'],
   ['plaza', 'nuraDiya'],
   ['plaza', 'tigerTrek'],
@@ -75,7 +76,49 @@ export const EDGES: [string, string][] = [
   ['lower', 'wharf'],
 ]
 
+/** How far a precinct's walkway arms reach from its crossroads: just past the outer fences. */
+const ARM_REACH = 18
+
+/**
+ * Exhibit plots fill the four corners of each precinct, so paths must not cut diagonally out
+ * of the crossroads. Each route into a precinct leaves along the walkway arm that faces the
+ * other end, and only turns towards it once clear of the fences.
+ */
+function buildNetwork() {
+  const nodes: Record<string, [number, number]> = { ...JUNCTIONS }
+  const edges: [string, string][] = []
+  const precinctNodes = new Set(PRECINCTS.map((p) => Object.keys(JUNCTIONS).find((k) => JUNCTIONS[k][0] === p.center[0] && JUNCTIONS[k][1] === p.center[1])))
+  const armOf = (from: string, toward: string) => {
+    const [cx, cz] = JUNCTIONS[from]
+    const [tx, tz] = JUNCTIONS[toward]
+    const dx = tx - cx
+    const dz = tz - cz
+    const [ax, az] = Math.abs(dx) >= Math.abs(dz) ? [Math.sign(dx), 0] : [0, Math.sign(dz)]
+    const name = `${from}:${ax},${az}`
+    if (!nodes[name]) {
+      nodes[name] = [cx + ax * ARM_REACH, cz + az * ARM_REACH]
+      edges.push([from, name])
+    }
+    return name
+  }
+  for (const [a, b] of ROUTES) {
+    const ea = precinctNodes.has(a) ? armOf(a, b) : a
+    const eb = precinctNodes.has(b) ? armOf(b, a) : b
+    edges.push([ea, eb])
+  }
+  return { nodes, edges }
+}
+
+const NETWORK = buildNetwork()
+
+/** Path network: visitors route along it and the terrain is painted with it. */
+export const NODES: Record<string, [number, number]> = NETWORK.nodes
+export const EDGES: [string, string][] = NETWORK.edges
+
 const PATH_WIDTH = 3.2
+
+/** Keep scenery this far from a precinct's centre (terrace plus its slope). */
+const PRECINCT_CLEAR = 26
 
 /** Shortest node-to-node route (by distance) through the path network. */
 export function route(from: string, to: string): [number, number][] {
@@ -143,15 +186,24 @@ interface Pad {
   height: number
 }
 
-/** Flat terraces for precincts and plazas, so exhibits and buildings sit level on the hill. */
+/** Round flat spots for plazas, the shop and the wharf. */
 const PADS: Pad[] = [
-  ...PRECINCTS.map((p) => ({ x: p.center[0], z: p.center[1], radius: 17, blend: 10, height: hillside(p.center[0], p.center[1]) })),
-  { x: 0, z: -56, radius: 12, blend: 8, height: hillside(0, -56) },
+  { x: 0, z: -56, radius: 12, blend: 16, height: hillside(0, -56) },
   { x: SHOP[0], z: SHOP[1], radius: 4, blend: 4, height: hillside(0, -56) },
   { x: WHARF[0], z: WHARF[1] - 2, radius: 6, blend: 6, height: 0.6 },
 ]
 
+/**
+ * Square terraces under the precincts, matching the 2×2 grid of plots so every fence, corners
+ * included, stands on level ground, with a short slope down to the hillside around each.
+ */
+const TERRACE_HALF = PLOT_OFFSET + PLOT_SIZE / 2 + 1.5
+// Must not exceed the gap between neighbouring terraces (7 m), so each stays exactly level.
+const TERRACE_BLEND = 7
+const TERRACES = PRECINCTS.map((p) => ({ x: p.center[0], z: p.center[1], height: hillside(p.center[0], p.center[1]) }))
+
 export function padHeight(x: number, z: number): number {
+  for (const t of TERRACES) if (Math.max(Math.abs(x - t.x), Math.abs(z - t.z)) <= TERRACE_HALF) return t.height
   for (const p of PADS) if (Math.hypot(x - p.x, z - p.z) <= p.radius) return p.height
   return hubHeight(x, z)
 }
@@ -164,7 +216,18 @@ export function hubHeight(x: number, z: number): number {
     const w = 1 - smoothstep(p.radius, p.radius + p.blend, d)
     if (w > 0) h = h * (1 - w) + p.height * w
   }
-  return h
+  // Blend smoothly between overlapping terrace slopes; inside a terrace only its own weight is non-zero.
+  let total = 0
+  let weighted = 0
+  let strongest = 0
+  for (const t of TERRACES) {
+    const w = 1 - smoothstep(TERRACE_HALF, TERRACE_HALF + TERRACE_BLEND, Math.max(Math.abs(x - t.x), Math.abs(z - t.z)))
+    if (w <= 0) continue
+    total += w
+    weighted += w * t.height
+    strongest = Math.max(strongest, w)
+  }
+  return total > 0 ? h * (1 - strongest) + (weighted / total) * strongest : h
 }
 
 export function precinctHeight(p: Precinct): number {
@@ -179,7 +242,7 @@ export function hubColor(x: number, z: number, h: number, jitter: number): strin
     if (Math.abs(x - p.center[0]) < 3 || Math.abs(z - p.center[1]) < 3) {
       if (Math.hypot(x - p.center[0], z - p.center[1]) < 16) return jitter > 0.5 ? '#d2be98' : '#cab48c'
     }
-    if (Math.hypot(x - p.center[0], z - p.center[1]) < 17) return p.ground
+    if (Math.max(Math.abs(x - p.center[0]), Math.abs(z - p.center[1])) < 16) return p.ground
   }
   if (Math.hypot(x, z + 56) < 12) return jitter > 0.5 ? '#d8c6a2' : '#d0bd98'
   if (h < 0.8) return '#d9c79c'
@@ -191,7 +254,7 @@ export function hubColor(x: number, z: number, h: number, jitter: number): strin
 export function isOpenGround(x: number, z: number): boolean {
   if (x < BOUNDS.minX + 1 || x > BOUNDS.maxX - 1 || z < BOUNDS.minZ + 1 || z > BOUNDS.maxZ - 1) return false
   if (onPath(x, z, 2.5)) return false
-  for (const p of PRECINCTS) if (Math.hypot(x - p.center[0], z - p.center[1]) < 22) return false
+  for (const p of PRECINCTS) if (Math.max(Math.abs(x - p.center[0]), Math.abs(z - p.center[1])) < PRECINCT_CLEAR) return false
   if (Math.hypot(x, z + 56) < 15) return false
   if (Math.hypot(x - SHOP[0], z - SHOP[1]) < 7) return false
   if (Math.hypot(x - WHARF[0], z - WHARF[1]) < 10) return false
