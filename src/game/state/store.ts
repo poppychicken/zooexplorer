@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type { BiomeId } from '../data/creatures'
 import { CREATURE_BY_ID } from '../data/creatures'
-import { BASIC_BAIT_PER_EXPEDITION, SHOP_ITEM_BY_ID, STARTING_MONEY, type NetTier, type ShopItemId } from '../data/shop'
+import { BASIC_BAIT_PER_EXPEDITION, SHOP_ITEM_BY_ID, STARTING_MONEY, isGear, type GearId, type NetTier, type ShopItemId } from '../data/shop'
 import { incomePerMinute, offlineEarnings } from '../systems/economy'
 
 /** Persisted save data. */
@@ -10,7 +10,7 @@ export interface SaveState {
   money: number
   netTier: NetTier
   premiumBait: number
-  owned: { tracker: boolean; buggy: boolean }
+  owned: Record<GearId, boolean>
   /** Species id → number captured. One exhibit per species. */
   captured: Record<string, number>
   discovered: Record<string, true>
@@ -38,7 +38,7 @@ const initialSave = (): SaveState => ({
   money: STARTING_MONEY,
   netTier: 1,
   premiumBait: 0,
-  owned: { tracker: false, buggy: false },
+  owned: { tracker: false, buggy: false, nightvision: false, climbing: false, zodiac: false },
   captured: {},
   discovered: {},
   lastSeen: Date.now(),
@@ -81,8 +81,7 @@ export const useGame = create<SaveState & Actions>()(
         if (id === 'net_mk2' && s.netTier >= 2) return { ok: false, reason: 'Owned' }
         if (id === 'net_mk3' && s.netTier >= 3) return { ok: false, reason: 'Owned' }
         if (id === 'net_mk3' && s.netTier < 2) return { ok: false, reason: 'Needs Net Mk II' }
-        if (id === 'tracker' && s.owned.tracker) return { ok: false, reason: 'Owned' }
-        if (id === 'buggy' && s.owned.buggy) return { ok: false, reason: 'Owned' }
+        if (isGear(id) && s.owned[id]) return { ok: false, reason: 'Owned' }
         if (s.money < item.price) return { ok: false, reason: 'Not enough money' }
         return { ok: true }
       },
@@ -101,12 +100,8 @@ export const useGame = create<SaveState & Actions>()(
           case 'premium_bait':
             set({ money, premiumBait: s.premiumBait + 5 })
             break
-          case 'tracker':
-            set({ money, owned: { ...s.owned, tracker: true } })
-            break
-          case 'buggy':
-            set({ money, owned: { ...s.owned, buggy: true } })
-            break
+          default:
+            if (isGear(id)) set({ money, owned: { ...s.owned, [id]: true } })
         }
         return true
       },
@@ -125,6 +120,11 @@ export const useGame = create<SaveState & Actions>()(
     {
       name: 'zoo-explorer-save',
       version: 1,
+      // Saves from before newer gear existed lack those keys: fill them in as not owned.
+      merge: (persisted, current) => {
+        const p = (persisted ?? {}) as Partial<SaveState>
+        return { ...current, ...p, owned: { ...current.owned, ...(p.owned ?? {}) } }
+      },
       partialize: (s): SaveState => ({
         money: s.money,
         netTier: s.netTier,

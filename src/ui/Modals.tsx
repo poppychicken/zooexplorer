@@ -111,7 +111,7 @@ function Gate() {
     <Panel title="Expedition ferry" onClose={resume} wide>
       <div className="cards">
         {BIOMES.map((b) => {
-          const locked = b.requires === 'buggy' && !owned.buggy
+          const locked = !!b.requires && !owned[b.requires]
           const species = b.spawns.map((s) => s.creatureId).concat(b.legendary.creatureId)
           const got = species.filter((id) => captured[id]).length
           return (

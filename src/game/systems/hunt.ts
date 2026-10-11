@@ -5,7 +5,7 @@ import { useGame, useSession } from '../state/store'
 import { playUi } from './audio'
 import { captureChance, rollCapture } from './capture'
 import { formatPrice, ticketPrice } from './economy'
-import { baits, creatures, now, nextUid, player, type CreatureRuntime } from './world'
+import { baits, creatures, now, nextUid, player, terrain, type CreatureRuntime } from './world'
 
 /** How far ahead of the player bait lands, in metres. */
 export const BAIT_TOSS = 7
@@ -55,7 +55,7 @@ export function dropBait(): boolean {
   const flat = new Vector3(player.forward.x, 0, player.forward.z).normalize()
   // Tossed far enough that a creature coming to eat it stays outside its (reduced) detection range.
   const pos = player.position.clone().addScaledVector(flat, BAIT_TOSS)
-  pos.y = 0
+  pos.y = terrain.height(pos.x, pos.z)
   const id = nextUid()
   baits.set(id, { id, position: pos, premium, expiresAt: now() + def.lifetimeSeconds })
   playUi('bait')

@@ -8,7 +8,7 @@ import { BAIT } from '../game/data/shop'
 import { useGame, useSession } from '../game/state/store'
 import { playCall, playUi } from '../game/systems/audio'
 import { isDown } from '../game/systems/input'
-import { addTrack, baits, creatures, now, player, type CreatureRuntime } from '../game/systems/world'
+import { addTrack, baits, creatures, now, player, terrain, type CreatureRuntime } from '../game/systems/world'
 import { startFlee } from '../game/systems/hunt'
 
 interface Gait {
@@ -22,6 +22,17 @@ const GAIT: Record<CreatureDef['placeholder']['shape'], Gait> = {
   tortoise: { walk: 0.5, run: 1.6 },
   lizard: { walk: 1, run: 4.5 },
   serpent: { walk: 2, run: 6.5 },
+  kangaroo: { walk: 1.6, run: 9 },
+  echidna: { walk: 0.6, run: 1.8 },
+  penguin: { walk: 0.8, run: 2.6 },
+  seal: { walk: 0.9, run: 3.5 },
+  whale: { walk: 2.2, run: 5 },
+}
+
+/** Height a creature stands at: the ground, except swimmers float at the water surface. */
+function groundUnder(def: CreatureDef, x: number, z: number): number {
+  const h = terrain.height(x, z)
+  return def.placeholder.shape === 'whale' ? Math.max(h, -0.35) : h
 }
 
 const DETECT: Record<CreatureDef['rarity'], number> = { common: 10, uncommon: 13, rare: 15, legendary: 16 }
@@ -58,6 +69,14 @@ const CALL_TEXT: Record<CreatureDef['call'], string> = {
   hiss: 'a dry hiss',
   rasp: 'a rasping hiss',
   chime: 'glassy chimes',
+  thump: 'heavy thumps on the ground',
+  snuffle: 'busy snuffling in the scrub',
+  whistle: 'a twittering whistle',
+  bleat: 'a gruff bleat',
+  growl: 'a low growl',
+  bray: 'braying and squawking',
+  bark: 'loud barking',
+  song: 'a long, haunting song',
 }
 
 export function Creature({ uid, halfSize }: { uid: number; halfSize: number }) {
@@ -95,12 +114,12 @@ export function Creature({ uid, halfSize }: { uid: number; halfSize: number }) {
     if (c.mode === 'struggling') {
       g.rotation.z = Math.sin(performance.now() / 60) * 0.12
     } else g.rotation.z = 0
-    body.current?.setNextKinematicTranslation({ x: c.position.x, y: radius, z: c.position.z })
+    body.current?.setNextKinematicTranslation({ x: c.position.x, y: groundUnder(def, c.position.x, c.position.z) + radius, z: c.position.z })
   })
 
   return (
     <>
-      <RigidBody ref={body} type="kinematicPosition" colliders={false} position={[runtime.position.x, radius, runtime.position.z]} userData={{ creatureUid: uid }}>
+      <RigidBody ref={body} type="kinematicPosition" colliders={false} position={[runtime.position.x, groundUnder(def, runtime.position.x, runtime.position.z) + radius, runtime.position.z]} userData={{ creatureUid: uid }}>
         <BallCollider args={[radius]} sensor={false} />
       </RigidBody>
       <CreatureVisual runtime={runtime} groupRef={visual} def={def} motion={motion} />
@@ -124,7 +143,7 @@ function CreatureVisual({
   useFrame(() => {
     const o = outer.current
     if (!o) return
-    o.position.set(runtime.position.x, 0, runtime.position.z)
+    o.position.set(runtime.position.x, groundUnder(def, runtime.position.x, runtime.position.z), runtime.position.z)
     o.rotation.y = runtime.heading
   })
   return (

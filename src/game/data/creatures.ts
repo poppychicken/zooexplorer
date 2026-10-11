@@ -1,8 +1,8 @@
 export type Rarity = 'common' | 'uncommon' | 'rare' | 'legendary'
-export type BiomeId = 'forest' | 'canyon'
+export type BiomeId = 'forest' | 'canyon' | 'outback' | 'mountain' | 'sea'
 
 /** Shape archetypes for the procedural placeholder models. */
-export type PlaceholderShape = 'quadruped' | 'bird' | 'tortoise' | 'lizard' | 'serpent'
+export type PlaceholderShape = 'quadruped' | 'bird' | 'tortoise' | 'lizard' | 'serpent' | 'kangaroo' | 'echidna' | 'penguin' | 'seal' | 'whale'
 
 export interface PlaceholderStyle {
   shape: PlaceholderShape
@@ -17,6 +17,10 @@ export interface PlaceholderStyle {
   ears?: 'pointed' | 'huge' | 'round' | 'none'
   tail?: 'bushy' | 'short' | 'long' | 'none'
   antlers?: boolean
+  /** Goat horns: short and curved, or the ibex's huge swept-back pair. */
+  horns?: 'goat' | 'ibex'
+  /** Dark bands across the back and tail (thylacine, red panda tail). */
+  stripes?: boolean
   glow?: boolean
   translucent?: boolean
 }
@@ -43,7 +47,7 @@ export interface CreatureDef {
   flies?: boolean
 }
 
-export type CallKind = 'yip' | 'grunt' | 'hoot' | 'bell' | 'chirp' | 'hiss' | 'rasp' | 'chime'
+export type CallKind = 'yip' | 'grunt' | 'hoot' | 'bell' | 'chirp' | 'hiss' | 'rasp' | 'chime' | 'thump' | 'snuffle' | 'whistle' | 'bleat' | 'growl' | 'bray' | 'bark' | 'song'
 
 /** How much each animal of this rarity adds to the zoo's ticket price, in $. */
 export const TICKET_BY_RARITY: Record<Rarity, number> = {
@@ -145,6 +149,129 @@ export const CREATURES: CreatureDef[] = [
     placeholder: { shape: 'serpent', size: 6, body: '#9fe3e0', accent: '#f6e7b8', detail: '#ffffff', glow: true, translucent: true },
     call: 'chime',
     height: 1.0,
+  }),
+  // --- Outback Scrub (Nura Diya Australia) ---
+  def({
+    id: 'red_kangaroo',
+    name: 'Red kangaroo',
+    biome: 'outback',
+    rarity: 'common',
+    description: 'The biggest kangaroo, grazing at dusk. Listen for the thump of its feet.',
+    placeholder: { shape: 'kangaroo', size: 1.3, body: '#b5562f', accent: '#e8d2b4', detail: '#3a2618', ears: 'pointed', tail: 'long' },
+    call: 'thump',
+    height: 1.5,
+  }),
+  def({
+    id: 'short_beaked_echidna',
+    name: 'Short-beaked echidna',
+    biome: 'outback',
+    rarity: 'common',
+    description: 'A spiny ant-eater that waddles through the spinifex, snuffling for termites.',
+    placeholder: { shape: 'echidna', size: 0.5, body: '#4a3a2c', accent: '#e9dcc0', detail: '#2a2018' },
+    call: 'snuffle',
+    height: 0.3,
+  }),
+  def({
+    id: 'thorny_devil',
+    name: 'Thorny devil',
+    biome: 'outback',
+    rarity: 'uncommon',
+    description: 'A spiky desert lizard that drinks dew through grooves in its skin. Easy to step over.',
+    placeholder: { shape: 'lizard', size: 0.35, body: '#c27b3a', accent: '#e8c27a', detail: '#7a4520', tail: 'long' },
+    call: 'hiss',
+    height: 0.12,
+  }),
+  def({
+    id: 'opal_backed_thylacine',
+    name: 'Opal-Backed Thylacine',
+    biome: 'outback',
+    rarity: 'legendary',
+    description: 'A ghost of the old bush, its stripes flashing like opal. Some say it never really left.',
+    placeholder: { shape: 'quadruped', size: 1.5, body: '#c79a62', accent: '#e8d6b0', detail: '#7ff5e0', legs: '#8a6a40', ears: 'round', tail: 'long', stripes: true, glow: true },
+    call: 'growl',
+    height: 0.9,
+  }),
+  // --- Mountain (Tiger Trek) ---
+  def({
+    id: 'himalayan_tahr',
+    name: 'Himalayan tahr',
+    biome: 'mountain',
+    rarity: 'common',
+    description: 'A shaggy wild goat that picks its way along impossible ledges.',
+    placeholder: { shape: 'quadruped', size: 1.1, body: '#7a5a3c', accent: '#b89a74', detail: '#3a2a1c', ears: 'pointed', tail: 'short', horns: 'goat' },
+    call: 'bleat',
+    height: 1.0,
+  }),
+  def({
+    id: 'red_panda',
+    name: 'Red panda',
+    biome: 'mountain',
+    rarity: 'uncommon',
+    description: 'Shy and fluffy, with a ringed tail. Whistles to its friends from the bamboo.',
+    placeholder: { shape: 'quadruped', size: 0.75, body: '#c4471f', accent: '#f4ead8', detail: '#2a1a14', ears: 'round', tail: 'bushy', stripes: true },
+    call: 'whistle',
+    height: 0.45,
+  }),
+  def({
+    id: 'snow_leopard',
+    name: 'Snow leopard',
+    biome: 'mountain',
+    rarity: 'rare',
+    description: 'The ghost of the mountains: smoky grey, rosetted and almost never seen.',
+    placeholder: { shape: 'quadruped', size: 1.3, body: '#cfcac2', accent: '#f2f0ea', detail: '#5a5a58', ears: 'round', tail: 'long', stripes: true },
+    call: 'growl',
+    height: 0.7,
+  }),
+  def({
+    id: 'aurora_ibex',
+    name: 'Aurora Ibex',
+    biome: 'mountain',
+    rarity: 'legendary',
+    description: 'Its crystal horns catch the sky and throw the aurora across the snowfields.',
+    placeholder: { shape: 'quadruped', size: 1.4, body: '#e6e2da', accent: '#ffffff', detail: '#a98cff', legs: '#8a8478', ears: 'pointed', tail: 'short', horns: 'ibex', glow: true },
+    call: 'chime',
+    height: 1.3,
+  }),
+  // --- Sea Coast (Great Southern Oceans) ---
+  def({
+    id: 'little_penguin',
+    name: 'Little penguin',
+    biome: 'sea',
+    rarity: 'common',
+    description: 'The smallest penguin in the world, waddling up the beach in little gangs.',
+    placeholder: { shape: 'penguin', size: 0.35, body: '#3d5a7a', accent: '#f4f4f0', detail: '#1a1a1a' },
+    call: 'bray',
+    height: 0.35,
+  }),
+  def({
+    id: 'australian_sea_lion',
+    name: 'Australian sea lion',
+    biome: 'sea',
+    rarity: 'common',
+    description: 'Hauls out on the warm rocks and barks at anyone who comes too close.',
+    placeholder: { shape: 'seal', size: 1.8, body: '#8a6a4c', accent: '#c9ac84', detail: '#3a2a1c' },
+    call: 'bark',
+    height: 0.7,
+  }),
+  def({
+    id: 'leopard_seal',
+    name: 'Leopard seal',
+    biome: 'sea',
+    rarity: 'rare',
+    description: 'A sleek, spotted hunter of the southern seas, with a famously toothy grin.',
+    placeholder: { shape: 'seal', size: 2.6, body: '#6a7078', accent: '#c4c8cc', detail: '#2a2e32', stripes: true },
+    call: 'growl',
+    height: 0.8,
+  }),
+  def({
+    id: 'aurora_leviathan',
+    name: 'Aurora Leviathan',
+    biome: 'sea',
+    rarity: 'legendary',
+    description: 'A whale that glows like the southern lights. It sings in the lagoon at the end of the bay.',
+    placeholder: { shape: 'whale', size: 7, body: '#2f4f7a', accent: '#cfe0ef', detail: '#6fffd8', glow: true },
+    call: 'song',
+    height: 1.6,
   }),
 ]
 

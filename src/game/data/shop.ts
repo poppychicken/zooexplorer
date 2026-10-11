@@ -15,7 +15,11 @@ export const NETS: Record<NetTier, NetDef> = {
   3: { tier: 3, name: 'Net Mk III', multiplier: 1.9, greenZone: 0.36 },
 }
 
-export type ShopItemId = 'net_mk2' | 'net_mk3' | 'premium_bait' | 'tracker' | 'buggy'
+/** One-off equipment you own once bought. */
+export type GearId = 'tracker' | 'buggy' | 'nightvision' | 'climbing' | 'zodiac'
+export const GEAR_IDS: GearId[] = ['tracker', 'buggy', 'nightvision', 'climbing', 'zodiac']
+
+export type ShopItemId = 'net_mk2' | 'net_mk3' | 'premium_bait' | GearId
 
 export interface ShopItem {
   id: ShopItemId
@@ -59,10 +63,33 @@ export const SHOP_ITEMS: ShopItem[] = [
     id: 'buggy',
     name: 'Off-road Buggy',
     price: 1000,
-    description: 'Rugged enough for the Arid Canyon.',
+    description: 'Rugged enough for the Arid Canyon. Drive it around the zoo and on expeditions.',
+    consumable: false,
+  },
+  {
+    id: 'nightvision',
+    name: 'Night-Vision Goggles',
+    price: 1500,
+    description: 'Outback creatures come out at dusk. Unlocks the Outback Scrub.',
+    consumable: false,
+  },
+  {
+    id: 'climbing',
+    name: 'Climbing Gear',
+    price: 2500,
+    description: 'Ropes, crampons and a warm coat. Unlocks the Mountain.',
+    consumable: false,
+  },
+  {
+    id: 'zodiac',
+    name: 'Zodiac Boat',
+    price: 4000,
+    description: 'Reach the wild coast by sea. Unlocks the Sea Coast.',
     consumable: false,
   },
 ]
+
+export const isGear = (id: ShopItemId): id is GearId => (GEAR_IDS as string[]).includes(id)
 
 export const SHOP_ITEM_BY_ID = Object.fromEntries(SHOP_ITEMS.map((i) => [i.id, i])) as Record<ShopItemId, ShopItem>
 

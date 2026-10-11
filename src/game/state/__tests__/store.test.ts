@@ -54,3 +54,17 @@ describe('save store', () => {
     expect(r.amount).toBeCloseTo(40 * 60)
   })
 })
+
+describe('gear', () => {
+  beforeEach(() => useGame.getState().resetSave())
+
+  it('sells the expedition unlocks once each', () => {
+    useGame.setState({ money: 10000 })
+    for (const id of ['nightvision', 'climbing', 'zodiac'] as const) {
+      expect(useGame.getState().buy(id)).toBe(true)
+      expect(useGame.getState().owned[id]).toBe(true)
+      expect(useGame.getState().canBuy(id).reason).toBe('Owned')
+    }
+    expect(useGame.getState().money).toBe(10000 - 1500 - 2500 - 4000)
+  })
+})

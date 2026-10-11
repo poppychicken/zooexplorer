@@ -141,11 +141,13 @@ function ExhibitResident({ def, half, seed }: { def: CreatureDef; half: number; 
   const group = useRef<Group>(null)
   const motion = useRef({ speed: 0 })
   const flies = !!def.flies
+  // Swimmers stay in the pool along the far side of the sea enclosures.
+  const minZ = def.placeholder.shape === 'whale' ? 1.8 : -half
   const state = useRef(
     (() => {
       const rng = mulberry32(seed)
       const x = range(rng, -half, half)
-      const z = range(rng, -half, half)
+      const z = range(rng, minZ, half)
       return { x, y: 0, z, tx: x, ty: 0, tz: z, heading: rng() * Math.PI * 2, wait: rng() * 3, perched: true }
     })(),
   )
@@ -199,7 +201,7 @@ function ExhibitResident({ def, half, seed }: { def: CreatureDef; half: number; 
     } else {
       s.tx = range(Math.random, -half, half)
       s.ty = 0
-      s.tz = range(Math.random, -half, half)
+      s.tz = range(Math.random, minZ, half)
     }
   }
 
@@ -291,16 +293,27 @@ function AviaryCage() {
   )
 }
 
-const HABITAT_FLOOR: Record<CreatureDef['biome'], string> = { forest: '#4a6b34', canyon: '#d6a46c' }
+const HABITAT_FLOOR: Record<CreatureDef['biome'], string> = { forest: '#4a6b34', canyon: '#d6a46c', outback: '#b5532e', mountain: '#8a8f86', sea: '#e3d3a4' }
+
+/** Scenery inside each biome's enclosures. */
+const HABITAT_PROPS: Record<CreatureDef['biome'], PlacedProp['kind'][]> = {
+  forest: ['bush', 'rock', 'mushroom', 'log', 'bush'],
+  canyon: ['rock', 'bush', 'rock', 'cactus'],
+  outback: ['spinifex', 'spinifex', 'termite', 'rock'],
+  mountain: ['rock', 'boulder', 'bush', 'rock'],
+  sea: ['coastrock', 'dunegrass', 'dunegrass', 'rock'],
+}
 
 function Habitat({ def, seed }: { def: CreatureDef; seed: number }) {
   const props = useMemo<PlacedProp[]>(() => {
     const rng = mulberry32(seed)
-    const kinds = def.biome === 'forest' ? (['bush', 'rock', 'mushroom', 'log', 'bush'] as const) : (['rock', 'bush', 'rock', 'cactus'] as const)
+    const kinds = HABITAT_PROPS[def.biome]
+    // Sea animals get a pool in half the enclosure, so keep decor to the dry half.
+    const maxZ = def.biome === 'sea' ? -0.5 : 4.5
     return Array.from({ length: 8 }, () => ({
       kind: kinds[Math.floor(rng() * kinds.length)],
       x: range(rng, -4.5, 4.5),
-      z: range(rng, -4.5, 4.5),
+      z: range(rng, -4.5, maxZ),
       scale: range(rng, 0.4, 0.7),
       rot: rng() * Math.PI * 2,
       tint: rng() - 0.5,
@@ -312,6 +325,12 @@ function Habitat({ def, seed }: { def: CreatureDef; seed: number }) {
         <planeGeometry args={[PLOT - 0.4, PLOT - 0.4]} />
         <meshStandardMaterial color={HABITAT_FLOOR[def.biome]} flatShading />
       </mesh>
+      {def.biome === 'sea' && (
+        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.12, 2.8]}>
+          <planeGeometry args={[PLOT - 1, 5]} />
+          <meshStandardMaterial color="#3fa5b8" roughness={0.2} metalness={0.1} />
+        </mesh>
+      )}
       {/* Walk-through decor: the fence already keeps the player out. */}
       <PropField props={props} colliders={false} />
     </>
@@ -582,8 +601,8 @@ export function ZooHub() {
       <Sign
         lines={[
           { text: 'ZOO MAP', size: 72, bold: true },
-          { text: 'Rainforest Trail → east · African Savannah → west', size: 30, color: '#5a4630' },
-          { text: 'Expedition ferry ↓ at the harbour wharf', size: 30, color: '#5a4630' },
+          { text: 'Nura Diya ↖ · Tiger Trek ↗ · Savannah ← · Rainforest →', size: 28, color: '#5a4630' },
+          { text: 'Great Southern Oceans ↘ · Expedition ferry ↓ at the wharf', size: 28, color: '#5a4630' },
         ]}
         position={[6.5, spawnY + 1.5, NODES.plaza[1] + 4]}
         rotation={[0, Math.PI + 0.7, 0]}
