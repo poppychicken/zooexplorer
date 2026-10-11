@@ -71,6 +71,78 @@
       "name": "Glassdune Serpent",
       "prompt": "a giant fantasy desert serpent coiled in an S-shape, translucent sand-glass scales in pale turquoise and gold, glowing faintly, crystalline crest on its head",
       "simplify_ratio": 0.6
+    },
+    {
+      "id": "red_kangaroo",
+      "name": "Red kangaroo",
+      "prompt": "a red kangaroo standing upright on big hind legs with a long thick tail, rusty red fur",
+      "simplify_ratio": 0.5
+    },
+    {
+      "id": "short_beaked_echidna",
+      "name": "Short-beaked echidna",
+      "prompt": "a short-beaked echidna, round body covered in cream and brown spines, long thin snout",
+      "simplify_ratio": 0.5
+    },
+    {
+      "id": "thorny_devil",
+      "name": "Thorny devil",
+      "prompt": "a thorny devil lizard covered in sharp orange and tan spikes, desert camouflage",
+      "simplify_ratio": 0.5
+    },
+    {
+      "id": "opal_backed_thylacine",
+      "name": "Opal-Backed Thylacine",
+      "prompt": "a fantasy thylacine (Tasmanian tiger), sandy fur with dark stripes that shimmer with opal colours, faint ghostly glow",
+      "simplify_ratio": 0.6
+    },
+    {
+      "id": "himalayan_tahr",
+      "name": "Himalayan tahr",
+      "prompt": "a shaggy Himalayan tahr wild goat with a thick brown mane and short curved horns",
+      "simplify_ratio": 0.5
+    },
+    {
+      "id": "red_panda",
+      "name": "Red panda",
+      "prompt": "a red panda with russet fur, white face markings and a fluffy ringed tail",
+      "simplify_ratio": 0.5
+    },
+    {
+      "id": "snow_leopard",
+      "name": "Snow leopard",
+      "prompt": "a snow leopard with smoky grey fur, dark rosettes and a long thick tail",
+      "simplify_ratio": 0.5
+    },
+    {
+      "id": "aurora_ibex",
+      "name": "Aurora Ibex",
+      "prompt": "a fantasy ibex with white fur and enormous swept-back crystal horns glowing with aurora colours",
+      "simplify_ratio": 0.6
+    },
+    {
+      "id": "little_penguin",
+      "name": "Little penguin",
+      "prompt": "a little blue penguin, slate-blue back and white belly, standing upright",
+      "simplify_ratio": 0.5
+    },
+    {
+      "id": "australian_sea_lion",
+      "name": "Australian sea lion",
+      "prompt": "an Australian sea lion lying on its belly propped up on its front flippers, brown and cream",
+      "simplify_ratio": 0.5
+    },
+    {
+      "id": "leopard_seal",
+      "name": "Leopard seal",
+      "prompt": "a sleek grey spotted leopard seal with a large head",
+      "simplify_ratio": 0.5
+    },
+    {
+      "id": "aurora_leviathan",
+      "name": "Aurora Leviathan",
+      "prompt": "a fantasy whale, deep blue with bands of glowing green and violet light like the southern aurora",
+      "simplify_ratio": 0.6
     }
   ]
 }

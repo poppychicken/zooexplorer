@@ -86,6 +86,40 @@ export const PROP_PARTS: Record<PropKind, Part[]> = {
     { geo: g.cylThin, color: '#efe6d2', pos: [0, 0.15, 0], scale: [0.12, 0.3, 0.12] },
     { geo: g.cap, color: '#c83c2c', pos: [0, 0.33, 0], scale: [0.25, 0.4, 0.25] },
   ],
+  gum: [
+    { geo: g.trunk, color: '#d8d2c4', pos: [0, 2, 0], scale: [1.1, 4, 1.1] },
+    { geo: g.trunk, color: '#cfc8b8', pos: [0.6, 3.6, 0], scale: [0.5, 1.6, 0.5], rot: [0, 0, -0.6] },
+    { geo: g.ico, color: '#7d8f5a', pos: [0, 4.6, 0], scale: [1.8, 0.9, 1.6] },
+    { geo: g.ico, color: '#8a9b66', pos: [1.3, 4.3, 0.3], scale: [1.1, 0.6, 1] },
+  ],
+  spinifex: [
+    { geo: g.cone, color: '#c9b061', pos: [0, 0.25, 0], scale: [0.6, 0.5, 0.6] },
+    { geo: g.cone, color: '#b8a052', pos: [0.4, 0.2, 0.2], scale: [0.4, 0.4, 0.4], rot: [0, 0, -0.4] },
+    { geo: g.cone, color: '#d4bc6c', pos: [-0.35, 0.2, -0.1], scale: [0.4, 0.4, 0.4], rot: [0, 0, 0.4] },
+  ],
+  termite: [
+    { geo: g.cone, color: '#a8532e', pos: [0, 1.2, 0], scale: [0.9, 2.4, 0.9] },
+    { geo: g.cone, color: '#9a4a28', pos: [0.4, 0.8, 0.2], scale: [0.5, 1.6, 0.5] },
+  ],
+  snowpine: [
+    { geo: g.trunk, color: '#4a3424', pos: [0, 0.8, 0], scale: [1, 1.6, 1] },
+    { geo: g.cone, color: '#2f4f3a', pos: [0, 2.4, 0], scale: [1.5, 2.4, 1.5] },
+    { geo: g.cone, color: '#e8eef0', pos: [0, 3.7, 0], scale: [1.1, 1.6, 1.1] },
+    { geo: g.cone, color: '#f4f8fa', pos: [0, 4.7, 0], scale: [0.7, 1.2, 0.7] },
+  ],
+  peak: [
+    { geo: g.cone, color: '#7d8088', pos: [0, 22, 0], scale: [30, 44, 30] },
+    { geo: g.cone, color: '#f2f5f7', pos: [0, 38, 0], scale: [12.5, 12, 12.5] },
+  ],
+  coastrock: [
+    { geo: g.dodeca, color: '#5d6066', pos: [0, 0.5, 0], scale: [1.4, 0.9, 1.2] },
+    { geo: g.dodeca, color: '#6b6e74', pos: [1, 0.3, 0.5], scale: [0.7, 0.5, 0.6] },
+  ],
+  dunegrass: [
+    { geo: g.cone, color: '#a8b071', pos: [0, 0.3, 0], scale: [0.25, 0.6, 0.25], rot: [0.2, 0, 0.1] },
+    { geo: g.cone, color: '#98a062', pos: [0.2, 0.25, 0.1], scale: [0.2, 0.5, 0.2], rot: [-0.2, 0, -0.2] },
+    { geo: g.cone, color: '#b4bb80', pos: [-0.2, 0.25, -0.1], scale: [0.2, 0.5, 0.2], rot: [0.1, 0, 0.3] },
+  ],
   deadtree: [
     { geo: g.trunk, color: '#7a6450', pos: [0, 1.3, 0], scale: [0.9, 2.6, 0.9] },
     { geo: g.trunk, color: '#7a6450', pos: [0.5, 2.4, 0], scale: [0.4, 1.2, 0.4], rot: [0, 0, -0.8] },
@@ -105,6 +139,13 @@ const PROP_COLLIDER: Record<PropKind, { halfHeight: number; radius: number } | n
   log: null,
   mushroom: null,
   deadtree: { halfHeight: 1.3, radius: 0.25 },
+  gum: { halfHeight: 2, radius: 0.3 },
+  spinifex: null,
+  termite: { halfHeight: 1.2, radius: 0.6 },
+  snowpine: { halfHeight: 2, radius: 0.35 },
+  peak: { halfHeight: 22, radius: 24 },
+  coastrock: { halfHeight: 0.6, radius: 1.2 },
+  dunegrass: null,
 }
 
 const m4 = new Matrix4()

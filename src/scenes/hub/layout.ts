@@ -28,9 +28,9 @@ export interface Precinct {
 export const PRECINCTS: Precinct[] = [
   { id: 'rainforest-trail', name: 'Rainforest Trail', subtitle: 'Temperate Forest expeditions', center: [34, 2], biome: 'forest', ground: '#3f6a32' },
   { id: 'african-savannah', name: 'African Savannah', subtitle: 'Arid Canyon expeditions · harbour views', center: [-32, 6], biome: 'canyon', ground: '#b9a064' },
-  { id: 'nura-diya', name: 'Nura Diya Australia', subtitle: 'Under construction', center: [-30, -42], biome: null, ground: '#9a7b4f' },
-  { id: 'tiger-trek', name: 'Tiger Trek', subtitle: 'Under construction', center: [32, -42], biome: null, ground: '#55703c' },
-  { id: 'great-southern-oceans', name: 'Great Southern Oceans', subtitle: 'Under construction', center: [26, 38], biome: null, ground: '#8f8a7a' },
+  { id: 'nura-diya', name: 'Nura Diya Australia', subtitle: 'Outback Scrub expeditions', center: [-30, -42], biome: 'outback', ground: '#a9643a' },
+  { id: 'tiger-trek', name: 'Tiger Trek', subtitle: 'Mountain expeditions · Himalayan highlands', center: [32, -42], biome: 'mountain', ground: '#7d8a74' },
+  { id: 'great-southern-oceans', name: 'Great Southern Oceans', subtitle: 'Sea Coast expeditions', center: [26, 38], biome: 'sea', ground: '#cdbf96' },
 ]
 
 /** Exhibit plots sit in a 2×2 grid around each precinct's central crossroads. */

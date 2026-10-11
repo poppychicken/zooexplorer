@@ -100,6 +100,33 @@ const CALLS: Record<CallKind, (c: AudioContext, out: AudioNode, t: number) => vo
   rasp: (c, o, t) => {
     for (let i = 0; i < 4; i++) noise(c, o, { start: t + i * 0.07, dur: 0.06, freq: 2000, q: 2, vol: 0.3 })
   },
+  thump: (c, o, t) => {
+    for (let i = 0; i < 3; i++) tone(c, o, { from: 90, to: 55, start: t + i * 0.32, dur: 0.12, vol: 0.4 })
+  },
+  snuffle: (c, o, t) => {
+    for (let i = 0; i < 5; i++) noise(c, o, { start: t + i * 0.11, dur: 0.07, freq: 700, q: 1.5, vol: 0.18 })
+  },
+  whistle: (c, o, t) => {
+    tone(c, o, { from: 2200, to: 2800, start: t, dur: 0.15, vol: 0.18 })
+    tone(c, o, { from: 2600, to: 2100, start: t + 0.2, dur: 0.2, vol: 0.18 })
+  },
+  bleat: (c, o, t) => {
+    tone(c, o, { type: 'sawtooth', from: 330, to: 290, start: t, dur: 0.5, vol: 0.14 })
+  },
+  growl: (c, o, t) => {
+    tone(c, o, { type: 'sawtooth', from: 70, to: 60, start: t, dur: 0.9, vol: 0.2 })
+    noise(c, o, { start: t, dur: 0.9, freq: 180, q: 1, vol: 0.2 })
+  },
+  bray: (c, o, t) => {
+    for (let i = 0; i < 4; i++) tone(c, o, { type: 'square', from: i % 2 ? 520 : 760, start: t + i * 0.16, dur: 0.14, vol: 0.08 })
+  },
+  bark: (c, o, t) => {
+    for (let i = 0; i < 3; i++) tone(c, o, { type: 'sawtooth', from: 240, to: 150, start: t + i * 0.28, dur: 0.18, vol: 0.2 })
+  },
+  song: (c, o, t) => {
+    tone(c, o, { from: 140, to: 260, start: t, dur: 1.4, vol: 0.3 })
+    tone(c, o, { from: 260, to: 110, start: t + 1.3, dur: 1.8, vol: 0.28 })
+  },
   chime: (c, o, t) => {
     ;[1046, 1318, 1568, 2093].forEach((f, i) => tone(c, o, { from: f, start: t + i * 0.12, dur: 1.4, vol: 0.12 }))
   },

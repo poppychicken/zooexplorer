@@ -152,11 +152,11 @@ The hub is laid out like Taronga Zoo Sydney (`src/scenes/hub/layout.ts`): Main E
 |---|---|---|
 | Rainforest Trail | Temperate Forest | Open |
 | African Savannah | Arid Canyon | Open |
-| Nura Diya Australia | Outback Scrub (proposed) | Under construction |
-| Tiger Trek | Asian Jungle (proposed) | Under construction |
-| Great Southern Oceans | Southern Ocean Coast (proposed) | Under construction |
+| Nura Diya Australia | Outback Scrub (Night-Vision Goggles) | Open |
+| Tiger Trek | Mountain (Climbing Gear) | Open |
+| Great Southern Oceans | Sea Coast (Zodiac Boat) | Open |
 
-Adding a biome = a `BIOMES` entry, four `CREATURES`, and setting `biome` on its precinct in `PRECINCTS`; the plots, signs and visitor routes follow automatically. Proposed rosters are in the session notes and the PR that introduced this layout.
+Adding a biome = a `BIOMES` entry (optionally `terrain: 'hills' | 'coast'`), four `CREATURES` (one legendary), a gear item in `shop.ts` if it's locked, and setting `biome` on a precinct in `PRECINCTS`. Plots, signs, visitor routes and the expedition menu follow automatically; `src/game/data/__tests__/data.test.ts` checks the wiring.
 
 ## 6. Ideas for after the slice
 
