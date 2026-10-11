@@ -25,7 +25,7 @@ npm run dev        # http://localhost:5173
 
 ### Loop
 
-1. **Zoo hub.** Eight empty exhibit plots fill in as you capture each species. Exhibits earn money every second, and while you're away too (capped at 8 hours).
+1. **Zoo hub.** Eight empty exhibit plots fill in as you capture each species. Visitors pay for tickets around the clock, including while you're away (capped at 8 hours).
 2. **Expedition gate.** Pick a biome. The Arid Canyon needs the Off-road Buggy.
 3. **Track.** Follow footprints, and listen for spatialised calls. The sound log tells you roughly where each came from. Creatures spot you inside their detection radius, which is larger when you sprint and largest for the big-eared fennec fox.
 4. **Lure.** Drop bait and back off. Creatures nearby walk over, eat and stay calm, and a calm creature won't flee.
