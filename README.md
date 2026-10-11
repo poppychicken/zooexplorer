@@ -22,7 +22,7 @@ npm run dev        # http://localhost:5173
 | Left click | Throw net |
 | Tab | Field journal |
 | E at the buggy | Get in or out of the Off-road Buggy (W/S drive, A/D steer, Shift boost) |
-| Esc | Pause menu: return to zoo, sensitivity, reset save |
+| Esc | Pause menu: back to the entrance (or home from an expedition), sensitivity, reset save |
 
 ### Loop
 

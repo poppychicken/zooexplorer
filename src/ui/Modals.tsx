@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react'
 import { requestLock } from '../App'
+import { player } from '../game/systems/world'
+import { SPAWN } from '../scenes/hub/layout'
 import { playUi, unlockAudio } from '../game/systems/audio'
 import { useGame, useSession } from '../game/state/store'
 import { BIOMES } from '../game/data/biomes'
@@ -26,6 +28,16 @@ function Panel({ title, children, onClose, wide }: { title: string; children: Re
   )
 }
 
+/** Hop back to the Main Entrance from anywhere in the zoo, getting out of the buggy first. */
+function backToEntrance() {
+  const s = useSession.getState()
+  if (s.driving) s.setDriving(false)
+  s.closeModal()
+  // Face down the hill, as when you first arrive.
+  player.teleport(SPAWN[0], SPAWN[1], Math.PI)
+  player.pitch = 0
+}
+
 const resume = () => {
   unlockAudio()
   useSession.getState().closeModal()
@@ -43,7 +55,7 @@ function Controls() {
         <kbd>D</kbd> move · <kbd>Shift</kbd> sprint · <kbd>Space</kbd> jump
       </li>
       <li>
-        <kbd>Mouse</kbd> look · <kbd>E</kbd> interact · <kbd>Tab</kbd> journal · <kbd>Esc</kbd> pause
+        <kbd>Mouse</kbd> look · <kbd>E</kbd> interact · <kbd>Tab</kbd> journal · <kbd>Esc</kbd> pause &amp; back to entrance
       </li>
       <li>
         On expedition: <kbd>Q</kbd> drop bait · <kbd>Left click</kbd> throw net
@@ -72,14 +84,15 @@ function Pause() {
         <button className="primary" onClick={resume}>
           {firstVisit ? 'Start exploring' : 'Resume'}
         </button>
-        {location.kind === 'biome' && (
+        {!firstVisit && (
           <button
             onClick={() => {
-              goTo({ kind: 'hub' })
+              if (location.kind === 'biome') goTo({ kind: 'hub' })
+              else backToEntrance()
               requestLock()
             }}
           >
-            Return to zoo
+            {location.kind === 'biome' ? 'Return to zoo entrance' : 'Back to entrance'}
           </button>
         )}
       </div>

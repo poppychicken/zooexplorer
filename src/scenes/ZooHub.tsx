@@ -114,11 +114,12 @@ function Fence({ x, z, size, openSide }: { x: number; z: number; size: number; o
           </mesh>
         </group>
       ))}
+      {/* Reach a metre below the pad too, so a dip in the ground can't open a gap underneath. */}
       <RigidBody type="fixed" colliders={false}>
-        <CuboidCollider args={[h, 1, 0.1]} position={[0, 1, -h]} />
-        <CuboidCollider args={[h, 1, 0.1]} position={[0, 1, h]} />
-        <CuboidCollider args={[0.1, 1, h]} position={[-h, 1, 0]} />
-        <CuboidCollider args={[0.1, 1, h]} position={[h, 1, 0]} />
+        <CuboidCollider args={[h, 2, 0.15]} position={[0, 1, -h]} />
+        <CuboidCollider args={[h, 2, 0.15]} position={[0, 1, h]} />
+        <CuboidCollider args={[0.15, 2, h]} position={[-h, 1, 0]} />
+        <CuboidCollider args={[0.15, 2, h]} position={[h, 1, 0]} />
       </RigidBody>
     </group>
   )
