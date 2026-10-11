@@ -40,7 +40,7 @@ export function Journal() {
                     <div className="desc">{seen ? c.description : 'Not yet discovered.'}</div>
                     <div className="stats">
                       {count > 0 ? <span className="tag good">In zoo{count > 1 ? ` ×${count}` : ''}</span> : <span className="tag">Not captured</span>}
-                      <span>Exhibit: +${c.income}/min</span>
+                      <span>Ticket +${c.ticket.toFixed(2)} each{c.flies ? ' · needs an aviary' : ''}</span>
                       {c.rarity === 'legendary' ? (
                         <span>Capture mini-game (green zone {Math.round(NETS[netTier].greenZone * 100)}%)</span>
                       ) : (

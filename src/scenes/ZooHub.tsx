@@ -1,12 +1,13 @@
 import { useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { CuboidCollider, CylinderCollider, RigidBody } from '@react-three/rapier'
-import { Group } from 'three'
+import { CanvasTexture, DoubleSide, Group, RepeatWrapping } from 'three'
 import { Ground } from '../components/Ground'
 import { Player } from '../components/Player'
 import { PropField, type PlacedProp } from '../components/Props'
 import { Sign } from '../components/Sign'
 import { CreatureModel } from '../components/CreatureModel'
+import { Visitors } from '../components/Visitors'
 import { CREATURES, type CreatureDef, type Rarity } from '../game/data/creatures'
 import { BIOME_BY_ID } from '../game/data/biomes'
 import { useGame, useSession } from '../game/state/store'
@@ -77,44 +78,169 @@ function Fence({ x, z, size, openSide }: { x: number; z: number; size: number; o
   )
 }
 
-/** A captured creature pottering around its enclosure. */
-function ExhibitResident({ def, half }: { def: CreatureDef; half: number }) {
+/** How many animals are drawn per exhibit; the sign shows the full count and all of them earn. */
+const MAX_VISIBLE_RESIDENTS = 12
+
+/** Perches inside an aviary: [x, y, z] relative to the plot centre. */
+const PERCHES: [number, number, number][] = [
+  [-3.5, 2.1, -3],
+  [3.2, 2.1, 2.8],
+  [0, 0, 0],
+  [-2, 0, 3.5],
+  [3.5, 0, -3],
+]
+
+/** A captured creature pottering around its enclosure. Flyers hop between perches and loop around the aviary. */
+function ExhibitResident({ def, half, seed }: { def: CreatureDef; half: number; seed: number }) {
   const group = useRef<Group>(null)
   const motion = useRef({ speed: 0 })
-  const state = useRef({ x: 0, z: 0, tx: 0, tz: 0, heading: 0, wait: Math.random() * 3 })
+  const flies = !!def.flies
+  const state = useRef(
+    (() => {
+      const rng = mulberry32(seed)
+      const x = range(rng, -half, half)
+      const z = range(rng, -half, half)
+      return { x, y: 0, z, tx: x, ty: 0, tz: z, heading: rng() * Math.PI * 2, wait: rng() * 3, perched: true }
+    })(),
+  )
   useFrame((_, dt) => {
     const s = state.current
     const g = group.current
     if (!g) return
     dt = Math.min(dt, 0.1)
     const dx = s.tx - s.x
+    const dy = s.ty - s.y
     const dz = s.tz - s.z
-    const d = Math.hypot(dx, dz)
+    const d = Math.hypot(dx, dy, dz)
     if (s.wait > 0) {
       s.wait -= dt
       motion.current.speed = 0
-      if (s.wait <= 0) {
-        s.tx = range(Math.random, -half, half)
-        s.tz = range(Math.random, -half, half)
-      }
+      if (s.wait <= 0) pickTarget(s)
     } else if (d < 0.2) {
-      s.wait = 2 + Math.random() * 4
+      if (s.perched || !flies) s.wait = 2 + Math.random() * 4
+      else pickTarget(s)
     } else {
-      const speed = def.rarity === 'legendary' ? 1.2 : 1
-      s.x += (dx / d) * speed * dt
-      s.z += (dz / d) * speed * dt
-      const target = Math.atan2(dx, dz)
-      let diff = target - s.heading
-      diff = Math.atan2(Math.sin(diff), Math.cos(diff))
-      s.heading += diff * Math.min(1, dt * 5)
+      const speed = flies ? 3 : def.rarity === 'legendary' ? 1.2 : 1
+      const step = Math.min(d, speed * dt)
+      s.x += (dx / d) * step
+      s.y += (dy / d) * step
+      s.z += (dz / d) * step
+      if (Math.hypot(dx, dz) > 0.05) {
+        const target = Math.atan2(dx, dz)
+        let diff = target - s.heading
+        diff = Math.atan2(Math.sin(diff), Math.cos(diff))
+        s.heading += diff * Math.min(1, dt * 5)
+      }
       motion.current.speed = speed
     }
-    g.position.set(s.x, 0, s.z)
+    g.position.set(s.x, s.y, s.z)
     g.rotation.y = s.heading
   })
+
+  function pickTarget(s: typeof state.current) {
+    if (flies && Math.random() < 0.6) {
+      // Loop through the air under the aviary roof.
+      s.perched = false
+      s.tx = range(Math.random, -half, half)
+      s.ty = range(Math.random, 1.2, AVIARY_HEIGHT - 1.6)
+      s.tz = range(Math.random, -half, half)
+    } else if (flies) {
+      const [px, py, pz] = PERCHES[Math.floor(Math.random() * PERCHES.length)]
+      s.perched = true
+      s.tx = px + range(Math.random, -0.4, 0.4)
+      s.ty = py
+      s.tz = pz
+    } else {
+      s.tx = range(Math.random, -half, half)
+      s.ty = 0
+      s.tz = range(Math.random, -half, half)
+    }
+  }
+
   return (
     <group ref={group}>
       <CreatureModel def={def} motion={motion} />
+    </group>
+  )
+}
+
+const AVIARY_HEIGHT = 5.5
+
+/** Transparent wire-mesh texture for the aviary walls and roof. */
+function useMeshTexture() {
+  return useMemo(() => {
+    const c = document.createElement('canvas')
+    c.width = c.height = 64
+    const ctx = c.getContext('2d')!
+    ctx.strokeStyle = '#3a3a36'
+    ctx.lineWidth = 3
+    ctx.strokeRect(0, 0, 64, 64)
+    const tex = new CanvasTexture(c)
+    tex.wrapS = tex.wrapT = RepeatWrapping
+    tex.repeat.set(PLOT * 2, PLOT * 2)
+    tex.anisotropy = 8
+    return tex
+  }, [])
+}
+
+/** Roofed wire cage over a plot, so flying creatures can't escape. */
+function AviaryCage() {
+  const mesh = useMeshTexture()
+  const h = PLOT / 2
+  const H = AVIARY_HEIGHT
+  const frame = '#4a4a44'
+  const walls: { pos: [number, number, number]; rot: [number, number, number]; size: [number, number] }[] = [
+    { pos: [0, H / 2, -h], rot: [0, 0, 0], size: [PLOT, H] },
+    { pos: [0, H / 2, h], rot: [0, Math.PI, 0], size: [PLOT, H] },
+    { pos: [-h, H / 2, 0], rot: [0, Math.PI / 2, 0], size: [PLOT, H] },
+    { pos: [h, H / 2, 0], rot: [0, -Math.PI / 2, 0], size: [PLOT, H] },
+    { pos: [0, H, 0], rot: [-Math.PI / 2, 0, 0], size: [PLOT, PLOT] },
+  ]
+  return (
+    <group>
+      {walls.map((w, i) => (
+        <mesh key={i} position={w.pos} rotation={w.rot}>
+          <planeGeometry args={w.size} />
+          <meshStandardMaterial map={mesh} transparent alphaTest={0.3} side={DoubleSide} />
+        </mesh>
+      ))}
+      {/* Steel frame: corner and mid posts, top beams and a ridge. */}
+      {[-h, 0, h].flatMap((x) =>
+        [-h, 0, h]
+          .filter((z) => Math.abs(x) === h || Math.abs(z) === h)
+          .map((z) => (
+            <mesh key={`${x},${z}`} position={[x, H / 2, z]} castShadow>
+              <boxGeometry args={[0.18, H, 0.18]} />
+              <meshStandardMaterial color={frame} flatShading />
+            </mesh>
+          )),
+      )}
+      {[
+        { p: [0, H, -h], s: [PLOT, 0.15, 0.15] },
+        { p: [0, H, h], s: [PLOT, 0.15, 0.15] },
+        { p: [-h, H, 0], s: [0.15, 0.15, PLOT] },
+        { p: [h, H, 0], s: [0.15, 0.15, PLOT] },
+        { p: [0, H, 0], s: [PLOT, 0.12, 0.12] },
+        { p: [0, H, 0], s: [0.12, 0.12, PLOT] },
+      ].map((b, i) => (
+        <mesh key={i} position={b.p as [number, number, number]}>
+          <boxGeometry args={b.s as [number, number, number]} />
+          <meshStandardMaterial color={frame} flatShading />
+        </mesh>
+      ))}
+      {/* Raised perches for the birds. */}
+      {PERCHES.filter(([, y]) => y > 0).map(([x, y, z], i) => (
+        <group key={i} position={[x, 0, z]}>
+          <mesh position={[0, y / 2, 0]} castShadow>
+            <cylinderGeometry args={[0.08, 0.1, y, 6]} />
+            <meshStandardMaterial color="#6b4a2e" flatShading />
+          </mesh>
+          <mesh position={[0, y, 0]} rotation={[0, 0, Math.PI / 2]} castShadow>
+            <cylinderGeometry args={[0.06, 0.06, 1.6, 6]} />
+            <meshStandardMaterial color="#6b4a2e" flatShading />
+          </mesh>
+        </group>
+      ))}
     </group>
   )
 }
@@ -155,8 +281,8 @@ function Exhibit({ creatureId, x, z, facing }: (typeof PLOTS)[number]) {
   const lines = open
     ? [
         { text: def.name, size: 64, bold: true },
-        { text: def.rarity.toUpperCase(), size: 40, color: RARITY_INK[def.rarity], bold: true },
-        { text: `+$${def.income}/min`, size: 46, color: '#2e6b2e' },
+        { text: `${def.flies ? 'AVIARY · ' : ''}${def.rarity.toUpperCase()} · ×${count}`, size: 38, color: RARITY_INK[def.rarity], bold: true },
+        { text: `Ticket +$${(def.ticket * count).toFixed(2)}`, size: 46, color: '#2e6b2e' },
       ]
     : [
         { text: discovered ? def.name : '???', size: 64, bold: true },
@@ -172,7 +298,10 @@ function Exhibit({ creatureId, x, z, facing }: (typeof PLOTS)[number]) {
         {open ? (
           <>
             <Habitat def={def} seed={creatureId.length * 97 + x} />
-            <ExhibitResident def={def} half={PLOT / 2 - 1.5} />
+            {def.flies && <AviaryCage />}
+            {Array.from({ length: Math.min(count, MAX_VISIBLE_RESIDENTS) }, (_, i) => (
+              <ExhibitResident key={i} def={def} half={PLOT / 2 - 1.5} seed={i * 7919 + creatureId.length} />
+            ))}
           </>
         ) : (
           <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.08, 0]} receiveShadow>
@@ -185,9 +314,21 @@ function Exhibit({ creatureId, x, z, facing }: (typeof PLOTS)[number]) {
   )
 }
 
+/** Visitors look into every open exhibit from the path side of its fence. */
+function ZooVisitors() {
+  const captured = useGame((s) => s.captured)
+  const spots = PLOTS.filter((p) => (captured[p.creatureId] ?? 0) > 0).map((p) => ({
+    x: p.x + p.facing * (PLOT / 2 + 1.2),
+    z: p.z,
+    facing: (-p.facing * Math.PI) / 2,
+  }))
+  return <Visitors spots={spots} />
+}
+
 function Paths() {
   const tiles: [number, number, number, number][] = [
     [0, -6, 8, 96], // main north-south path
+    [0, 50, 8, 16], // entrance and ticket booth
     [-10.5, -27, 7, 8],
     [-10.5, -9, 7, 8],
     [-10.5, 9, 7, 8],
@@ -395,6 +536,7 @@ export function ZooHub() {
       <Fountain />
       <ExpeditionGate />
       <ShopKiosk />
+      <ZooVisitors />
       <Bench x={-4.5} z={14} rot={Math.PI / 2} />
       <Bench x={4.5} z={14} rot={-Math.PI / 2} />
       <Bench x={-4.5} z={-14} rot={Math.PI / 2} />

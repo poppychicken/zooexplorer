@@ -25,14 +25,14 @@ npm run dev        # http://localhost:5173
 
 ### Loop
 
-1. **Zoo hub.** Eight empty exhibit plots fill in as you capture each species. Exhibits earn money every second, and while you're away too (capped at 8 hours).
+1. **Zoo hub.** Eight empty exhibit plots fill in as you capture each species. Visitors pay for tickets around the clock, including while you're away (capped at 8 hours).
 2. **Expedition gate.** Pick a biome. The Arid Canyon needs the Off-road Buggy.
 3. **Track.** Follow footprints, and listen for spatialised calls. The sound log tells you roughly where each came from. Creatures spot you inside their detection radius, which is larger when you sprint and largest for the big-eared fennec fox.
 4. **Lure.** Drop bait and back off. Creatures nearby walk over, eat and stay calm, and a calm creature won't flee.
 5. **Net.** Capture chance is `base(rarity) × net multiplier × (baited ? 1.5 : 1)`, capped at 95%. The journal shows your current odds.
 6. **Legendaries.** Each biome has one in a lair at the far end. Netting it starts a mini-game: hold to wind in, then release while the struggle marker is in the green zone. Better nets widen the zone. Three misses and it breaks free.
 
-Capturing a species you already have re-homes the duplicate for a one-off fee (15 minutes of that exhibit's income).
+**Visitors pay to get in.** Once your zoo has an animal, about 4 visitors a minute buy a ticket at the booth by the entrance. The ticket price is the sum over every animal: common +$0.50, uncommon +$1.25, rare +$3, legendary +$10, so more and rarer animals mean pricier tickets. Your income is visitors × ticket price, and it keeps coming while you're away. Exhibits hold any number of animals. Every extra catch of a species joins its enclosure and adds that species' income. Creatures that can fly (the barn owl) live in a roofed aviary.
 
 Balance values live in `src/game/data/` (`creatures.ts`, `shop.ts`, `biomes.ts`) and `src/game/systems/capture.ts`.
 

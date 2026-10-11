@@ -4,7 +4,7 @@ import { BAIT } from '../data/shop'
 import { useGame, useSession } from '../state/store'
 import { playUi } from './audio'
 import { captureChance, rollCapture } from './capture'
-import { formatMoney } from './economy'
+import { formatPrice, ticketPrice } from './economy'
 import { baits, creatures, now, nextUid, player, type CreatureRuntime } from './world'
 
 /** How far ahead of the player bait lands, in metres. */
@@ -96,9 +96,9 @@ export function completeCapture(c: CreatureRuntime) {
   playUi('catch')
   const session = useSession.getState()
   if (result.kind === 'new') {
-    session.toast(`Captured a ${def.name}! A new exhibit is open at your zoo (+$${def.income}/min).`, def.rarity === 'legendary' ? 'legendary' : 'good')
+    session.toast(`Captured a ${def.name}! A new exhibit is open, and tickets now cost ${formatPrice(ticketPrice(useGame.getState().captured))} (+${formatPrice(def.ticket)}).`, def.rarity === 'legendary' ? 'legendary' : 'good')
   } else {
-    session.toast(`Captured another ${def.name}. Re-homed to a partner zoo for ${formatMoney(result.fee)}.`, 'good')
+    session.toast(`Captured another ${def.name}! ${result.count} in its exhibit now. Tickets: ${formatPrice(ticketPrice(useGame.getState().captured))} (+${formatPrice(def.ticket)}).`, 'good')
   }
   // Let the capture animation play before removing it.
   setTimeout(() => creatures.delete(c.uid), 900)

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useGame, useSession } from '../game/state/store'
-import { formatMoney, incomePerMinute } from '../game/systems/economy'
+import { formatMoney, formatPrice, incomePerMinute, ticketPrice, visitorsPerMinute } from '../game/systems/economy'
 import { NETS } from '../game/data/shop'
 import { BIOME_BY_ID } from '../game/data/biomes'
 import { CREATURE_BY_ID, RARITY_COLOR } from '../game/data/creatures'
@@ -13,7 +13,11 @@ function Money() {
   return (
     <div className="hud-money">
       <div className="money">{formatMoney(money)}</div>
-      <div className="rate">{rate > 0 ? `+${formatMoney(rate)}/min from exhibits` : 'Capture a creature to open an exhibit'}</div>
+      <div className="rate">
+        {rate > 0
+          ? `Tickets ${formatPrice(ticketPrice(captured))} × ${visitorsPerMinute(captured)} visitors/min = +${formatMoney(rate)}/min`
+          : 'Zoo closed: capture a creature to open it to visitors'}
+      </div>
     </div>
   )
 }
