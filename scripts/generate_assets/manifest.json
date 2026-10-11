@@ -1,0 +1,76 @@
+{
+  "_comment": "Edit prompts or model settings here, then run generate.py. Model names and input keys change on Replicate: check replicate.com before running.",
+  "style": "stylized low-poly 3D game character, flat-shaded facets, simple clean shapes, soft studio lighting, full body, side three-quarter view, centred, plain light grey background, no shadow, no text",
+  "image_model": {
+    "ref": "black-forest-labs/flux-schnell",
+    "input": {
+      "aspect_ratio": "1:1",
+      "output_format": "png",
+      "num_outputs": 1
+    }
+  },
+  "model_3d": {
+    "ref": "firtoz/trellis",
+    "image_key": "images",
+    "image_as_list": true,
+    "input": {
+      "generate_model": true,
+      "texture_size": 1024,
+      "mesh_simplify": 0.95,
+      "ss_sampling_steps": 12,
+      "slat_sampling_steps": 12
+    }
+  },
+  "icon_size": 256,
+  "texture_size": 1024,
+  "creatures": [
+    {
+      "id": "red_fox",
+      "name": "Red fox",
+      "prompt": "a red fox with orange fur, white chest and tail tip, black legs and ears",
+      "simplify_ratio": 0.5
+    },
+    {
+      "id": "european_badger",
+      "name": "European badger",
+      "prompt": "a stocky European badger with grey body and a black-and-white striped face",
+      "simplify_ratio": 0.5
+    },
+    {
+      "id": "barn_owl",
+      "name": "Barn owl",
+      "prompt": "a barn owl standing upright, golden-buff wings, white heart-shaped face, dark eyes",
+      "simplify_ratio": 0.5
+    },
+    {
+      "id": "moss_antler_stag",
+      "name": "Moss-Antler Stag",
+      "prompt": "a majestic fantasy stag with huge branching antlers covered in glowing green moss and tiny glowing flowers, ancient and mystical",
+      "simplify_ratio": 0.6
+    },
+    {
+      "id": "fennec_fox",
+      "name": "Fennec fox",
+      "prompt": "a tiny pale cream fennec fox with enormous ears and a bushy tail",
+      "simplify_ratio": 0.5
+    },
+    {
+      "id": "desert_tortoise",
+      "name": "Desert tortoise",
+      "prompt": "a desert tortoise with a high domed brown patterned shell and scaly sandy legs",
+      "simplify_ratio": 0.5
+    },
+    {
+      "id": "gila_monster",
+      "name": "Gila monster",
+      "prompt": "a Gila monster lizard with beaded black skin and bright orange-pink bands, low to the ground, long thick tail",
+      "simplify_ratio": 0.5
+    },
+    {
+      "id": "glassdune_serpent",
+      "name": "Glassdune Serpent",
+      "prompt": "a giant fantasy desert serpent coiled in an S-shape, translucent sand-glass scales in pale turquoise and gold, glowing faintly, crystalline crest on its head",
+      "simplify_ratio": 0.6
+    }
+  ]
+}

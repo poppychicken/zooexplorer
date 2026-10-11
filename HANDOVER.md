@@ -4,6 +4,12 @@ Handover notes for restarting this project from scratch in a new Claude Code ses
 
 ---
 
+## 0. Status (October 2026)
+
+The vertical slice from section 4 is built (see `README.md` to run it). All four milestones are done: hub and FPS controller, forest and capture loop, shop and economy, canyon and legendary mini-game. The Replicate pipeline (`scripts/generate_assets/generate.py`) has been written but not yet run, because the user runs it locally, so the game still uses procedural placeholder creatures. Tuning still to do in real playtests: detection radii, mini-game speed and the prices.
+
+---
+
 ## 1. Concept
 
 A **first-person explorer game playable in the browser**.
