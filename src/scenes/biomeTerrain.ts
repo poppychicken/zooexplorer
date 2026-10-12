@@ -1,14 +1,12 @@
-import type { BiomeDef } from '../game/data/biomes'
+import type { BiomeDef, PropKind } from '../game/data/biomes'
+import type { PlacedProp } from '../components/Props'
+import { patch, proximity, smoothstep, type TerrainSurface } from '../components/terrainSurface'
 
 /**
  * Ground shape and colour for expedition biomes. Flat biomes keep height 0; the Mountain has
  * rolling hills rising to the peaks, and the Sea Coast has dunes, a shoreline and a lagoon.
  */
 
-const smoothstep = (a: number, b: number, x: number) => {
-  const t = Math.max(0, Math.min(1, (x - a) / (b - a)))
-  return t * t * (3 - 2 * t)
-}
 
 /** The lagoon around the Sea Coast legendary's lair. */
 export const LAGOON_RADIUS = 24
@@ -92,3 +90,59 @@ export function biomeColor(biome: BiomeDef): (x: number, z: number, h: number, j
   }
   return (_x, _z, _h, j) => ground[Math.floor(j * ground.length) % ground.length]
 }
+
+const TREES = new Set<PropKind>(['pine', 'oak', 'deadtree', 'gum', 'snowpine'])
+const ROCKS = new Set<PropKind>(['boulder', 'coastrock', 'mesa', 'rock'])
+
+/**
+ * Which ground textures a biome uses and where: grass and leaf litter in the forest, sand and
+ * cracked earth in the desert, rock on steep slopes and snow up high in the mountains, beach sand
+ * along the water. Litter gathers under trees and rubble around rocks, so props sit in the ground.
+ */
+export function biomeSurface(biome: BiomeDef, props: PlacedProp[]): TerrainSurface {
+  const underTree = proximity(props.filter((p) => TREES.has(p.kind)).map((p) => ({ x: p.x, z: p.z })), 4.5)
+  const byRock = proximity(props.filter((p) => ROCKS.has(p.kind)).map((p) => ({ x: p.x, z: p.z })), p0(biome))
+  switch (biome.id) {
+    case 'forest':
+      return {
+        layers: ['grass', 'forest_floor', 'dirt', 'rock'],
+        weights: (x, z) => {
+          const litter = Math.max(underTree(x, z) * 1.6, smoothstep(0.55, 0.75, patch(x, z, 0.035, 1)))
+          return [1 - litter, litter * 1.4, smoothstep(0.7, 0.85, patch(x, z, 0.06, 4)) * 1.5, byRock(x, z) * 0.8]
+        },
+      }
+    case 'canyon':
+      return {
+        layers: ['desert_sand', 'cracked_earth', 'rock', 'dirt'],
+        weights: (x, z) => [1, smoothstep(0.55, 0.72, patch(x, z, 0.03, 2)) * 1.6, byRock(x, z) * 1.3, underTree(x, z) * 0.8],
+      }
+    case 'outback':
+      return {
+        layers: ['red_sand', 'cracked_earth', 'dirt', 'rock'],
+        weights: (x, z) => [1, smoothstep(0.6, 0.78, patch(x, z, 0.03, 3)) * 1.4, underTree(x, z) * 1.2 + smoothstep(0.7, 0.85, patch(x, z, 0.05, 6)), byRock(x, z)],
+      }
+    case 'mountain':
+      return {
+        layers: ['alpine_grass', 'rock', 'snow', 'dirt'],
+        weights: (x, z, h, slope) => {
+          const snow = smoothstep(10.5, 13.5, h) + (h > 6 ? smoothstep(0.82, 0.92, patch(x, z, 0.05, 7)) : 0)
+          const rock = Math.max(smoothstep(0.35, 0.6, slope), smoothstep(8, 9.5, h) * (1 - snow), byRock(x, z))
+          return [1, rock * 2, snow * 3, underTree(x, z) * 0.7]
+        },
+      }
+    case 'sea': {
+      const [lx, lz] = biome.legendary.lair
+      return {
+        layers: ['beach_sand', 'grass', 'rock', 'dirt'],
+        weights: (x, z, h) => {
+          const shore = Math.max(smoothstep(-biome.halfSize + 32, -biome.halfSize + 20, z), smoothstep(LAGOON_RADIUS + 16, LAGOON_RADIUS + 6, Math.hypot(x - lx, z - lz)))
+          const sand = Math.max(shore, smoothstep(0.42, 0.28, h))
+          return [sand * 2, (1 - sand) * (0.6 + patch(x, z, 0.04, 5)), byRock(x, z) * 1.2, smoothstep(-0.1, -0.4, h) * 2]
+        },
+      }
+    }
+  }
+}
+
+/** Rubble spreads further around the canyon's mesas than around ordinary rocks. */
+const p0 = (biome: BiomeDef) => (biome.id === 'canyon' ? 7 : 3)

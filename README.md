@@ -112,6 +112,32 @@ node scripts/nature/build.mjs <folder with the pack's .glb files>
 
 The pick list (model id → pack file) is at the top of that script, and `src/components/NatureKit.tsx` maps prop kinds to model ids (`KIT`) with a target height for each. Props spread across a kind's variants, so the forest mixes five pines and five broadleaf trees. Kinds not in the kit (cactus, mesa, termite mound, ghost gum, peak, log) keep their procedural shapes, and those shapes also stand in while the scenery file loads. Each biome can tint the grey kit rocks with `rockTint` in `biomes.ts`, which turns them into red sandstone in the canyon and outback.
 
+## Ground textures
+
+The ground is textured with 11 seamless, hand-painted tiles in `public/assets/textures/`: grass, forest floor, dirt, rock, desert sand, cracked earth, red sand, alpine grass, snow, beach sand and gravel. `scripts/generate_assets/textures.py` generates them from the prompts in `textures.json`:
+
+```sh
+python scripts/generate_assets/textures.py                       # anything missing
+python scripts/generate_assets/textures.py --force --only gravel  # redo one
+```
+
+1. FLUX 1.1 Pro paints a top-down texture (about $0.04 each).
+2. The script removes its lighting gradients.
+3. It blends four half-shifted copies so the texture tiles with no seams.
+
+An optional `saturation` per texture tones down colours that come out too strong.
+
+`TerrainMaterial` blends up to eight textures per vertex. Each texture is sampled at two scales, with noise-broken borders, so the repeat doesn't show.
+
+Where each texture goes is set per biome in `biomeSurface` (`biomeTerrain.ts`) and for the zoo in `HUB_SURFACE` (`hub/layout.ts`):
+- **Forest:** leaf litter gathers under trees.
+- **Canyon:** rubble around rocks and mesas.
+- **Mountain:** rock on steep slopes and snow up high.
+- **Sea Coast:** sand along the water.
+- **Zoo:** gravel paths, with each precinct on its biome's ground.
+
+Until the textures load, or if they fail, the ground falls back to its flat colours.
+
 ## Deploying (GitHub Pages)
 
 `.github/workflows/deploy.yml` runs the tests, builds and publishes `dist/` on every push to `main`. In the repo, open **Settings → Pages** and set **Source** to **GitHub Actions**. Production builds use the base path `/zooexplorer/` (see `vite.config.ts`). Change it there if you rename the repo or use a custom domain.

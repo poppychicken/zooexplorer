@@ -1,4 +1,5 @@
 import type { BiomeId } from '../../game/data/creatures'
+import { patch, smoothstep, type GroundTexture, type TerrainSurface } from '../../components/terrainSurface'
 
 /**
  * Zoo hub layout, loosely modelled on Taronga Zoo Sydney: a hillside running down to the harbour.
@@ -155,6 +156,13 @@ function distToSegment(px: number, pz: number, a: [number, number], b: [number, 
   return Math.hypot(px - (a[0] + t * dx), pz - (a[1] + t * dz))
 }
 
+/** Distance from the edge of the nearest path (negative on the path). */
+function pathEdgeDistance(x: number, z: number): number {
+  let best = Infinity
+  for (const [a, b] of EDGES) best = Math.min(best, distToSegment(x, z, NODES[a], NODES[b]))
+  return best - PATH_WIDTH / 2
+}
+
 export function onPath(x: number, z: number, margin = 0): boolean {
   for (const [a, b] of EDGES) if (distToSegment(x, z, NODES[a], NODES[b]) < PATH_WIDTH / 2 + margin) return true
   return false
@@ -162,10 +170,6 @@ export function onPath(x: number, z: number, margin = 0): boolean {
 
 // --- Terrain -------------------------------------------------------------
 
-const smoothstep = (a: number, b: number, x: number) => {
-  const t = Math.max(0, Math.min(1, (x - a) / (b - a)))
-  return t * t * (3 - 2 * t)
-}
 
 /** The bare hillside: high in the north, falling to the harbour in the south and the west. */
 function hillside(x: number, z: number): number {
@@ -248,6 +252,51 @@ export function hubColor(x: number, z: number, h: number, jitter: number): strin
   if (h < 0.8) return '#d9c79c'
   const greens = ['#5e8a42', '#679449', '#557f3c', '#6f9c4f']
   return greens[Math.floor(jitter * greens.length) % greens.length]
+}
+
+/** Each precinct's ground echoes its biome. */
+const PRECINCT_GROUND: Record<BiomeId, GroundTexture> = {
+  forest: 'forest_floor',
+  canyon: 'desert_sand',
+  outback: 'red_sand',
+  mountain: 'alpine_grass',
+  sea: 'beach_sand',
+}
+
+const HUB_LAYERS: GroundTexture[] = ['grass', 'gravel', 'forest_floor', 'desert_sand', 'red_sand', 'alpine_grass', 'beach_sand', 'dirt']
+
+/** Ground textures for the zoo: gravel paths and plazas, precinct grounds, sand at the shore, grass elsewhere. */
+export const HUB_SURFACE: TerrainSurface = {
+  layers: HUB_LAYERS,
+  weights: (x, z, h) => {
+    const w = new Array<number>(HUB_LAYERS.length).fill(0)
+    const add = (t: GroundTexture, v: number) => (w[HUB_LAYERS.indexOf(t)] += v)
+    if (h < -0.2) {
+      add('dirt', 1)
+      return w
+    }
+    const path = smoothstep(0.8, -0.2, pathEdgeDistance(x, z))
+    add('gravel', path * 3)
+    let inPrecinct = 0
+    for (const p of PRECINCTS) {
+      const d = Math.max(Math.abs(x - p.center[0]), Math.abs(z - p.center[1]))
+      const inside = smoothstep(17, 15, d)
+      if (!inside) continue
+      inPrecinct = Math.max(inPrecinct, inside)
+      const plaza = (Math.abs(x - p.center[0]) < 3 || Math.abs(z - p.center[1]) < 3) && Math.hypot(x - p.center[0], z - p.center[1]) < 16
+      if (plaza) add('gravel', inside * 2)
+      else if (p.biome) add(PRECINCT_GROUND[p.biome], inside * 2)
+      else add('dirt', inside * 2)
+    }
+    add('gravel', smoothstep(13, 11, Math.hypot(x, z + 56)) * 3)
+    const open = 1 - inPrecinct
+    const shore = smoothstep(1.1, 0.6, h)
+    add('beach_sand', shore * 2 * open)
+    add('grass', open * (1 - shore) * (0.7 + patch(x, z, 0.05, 2)))
+    add('forest_floor', open * (1 - shore) * smoothstep(0.62, 0.78, patch(x, z, 0.04, 8)))
+    add('dirt', open * smoothstep(0.75, 0.88, patch(x, z, 0.07, 3)) * 0.8)
+    return w
+  },
 }
 
 /** Is this spot free for scattering bushland trees? */

@@ -15,6 +15,7 @@ import {
   Vector3,
 } from 'three'
 import type { PropKind } from '../game/data/biomes'
+import { AssetBoundary } from './AssetBoundary'
 import { KIT, KitField } from './NatureKit'
 
 export interface PlacedProp {
@@ -235,9 +236,11 @@ export function PropField({ props, colliders: withColliders = true, rockTint }: 
     <>
       <ProceduralProps byKind={procedural} />
       {/* Scenery models load in the background; the procedural shapes stand in until they arrive. */}
-      <Suspense fallback={<ProceduralProps byKind={kit} />}>
-        <KitField byKind={kit} rockTint={rockTint} />
-      </Suspense>
+      <AssetBoundary fallback={<ProceduralProps byKind={kit} />}>
+        <Suspense fallback={<ProceduralProps byKind={kit} />}>
+          <KitField byKind={kit} rockTint={rockTint} />
+        </Suspense>
+      </AssetBoundary>
       {colliders.length > 0 && (
         <RigidBody type="fixed" colliders={false}>
           {colliders}

@@ -8,7 +8,7 @@ import { Bounds, PropField, type PlacedProp } from '../components/Props'
 import { Sign } from '../components/Sign'
 import { Creature } from '../components/Creature'
 import { HeightTerrain } from '../components/HeightTerrain'
-import { WATER_LEVEL, arrivalPoint, biomeColor, biomeHeight } from './biomeTerrain'
+import { WATER_LEVEL, arrivalPoint, biomeColor, biomeHeight, biomeSurface } from './biomeTerrain'
 import { OwnedBuggy } from '../components/Buggy'
 import { BIOME_BY_ID, type BiomeDef } from '../game/data/biomes'
 import { CREATURE_BY_ID, type BiomeId } from '../game/data/creatures'
@@ -360,6 +360,7 @@ export function Biome({ biomeId }: { biomeId: BiomeId }) {
     terrain.height = biomeHeight(biome)
   }, [biome])
   const props = useMemo(() => scatterProps(biome), [biome])
+  const surface = useMemo(() => biomeSurface(biome, props), [biome, props])
   const uids = useCreaturePopulation(biome)
   const spawn = spawnPoint(biome)
   const sky = useMemo(() => new Color(biome.sky), [biome])
@@ -388,9 +389,9 @@ export function Biome({ biomeId }: { biomeId: BiomeId }) {
         shadow-camera-far={300}
       />
       {biome.terrain === 'hills' || biome.terrain === 'coast' ? (
-        <HeightTerrain size={h * 2 + 80} segments={Math.round((h * 2 + 80) / 2.5)} height={biomeHeight(biome)} color={biomeColor(biome)} seed={biome.seed} />
+        <HeightTerrain size={h * 2 + 80} segments={Math.round((h * 2 + 80) / 2.5)} height={biomeHeight(biome)} color={biomeColor(biome)} seed={biome.seed} surface={surface} />
       ) : (
-        <Ground size={h * 2 + 60} colors={biome.ground} seed={biome.seed} segments={80} />
+        <Ground size={h * 2 + 60} colors={biome.ground} seed={biome.seed} segments={100} surface={surface} />
       )}
       {biome.terrain === 'coast' && (
         <mesh position={[0, WATER_LEVEL, 0]} rotation={[-Math.PI / 2, 0, 0]}>

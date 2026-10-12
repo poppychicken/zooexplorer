@@ -1,7 +1,10 @@
-import { useMemo } from 'react'
+import { Suspense, useMemo } from 'react'
 import { HeightfieldCollider, RigidBody } from '@react-three/rapier'
-import { BufferAttribute, Color, PlaneGeometry } from 'three'
+import { BufferAttribute, Color, PlaneGeometry, type BufferGeometry } from 'three'
 import { mulberry32 } from '../game/systems/rng'
+import { AssetBoundary } from './AssetBoundary'
+import { TerrainMaterial } from './TerrainMaterial'
+import { applySurface, type TerrainSurface } from './terrainSurface'
 
 interface Props {
   /** Square size in metres, centred on the origin. */
@@ -11,10 +14,12 @@ interface Props {
   /** Face colour from the face centre; `jitter` is a stable random number in [0, 1). */
   color: (x: number, z: number, h: number, jitter: number) => string
   seed: number
+  /** Textured ground; without it the terrain uses the flat face colours. */
+  surface?: TerrainSurface
 }
 
 /** Faceted ground mesh shaped by a height function, with a matching Rapier heightfield. */
-export function HeightTerrain({ size, segments, height, color, seed }: Props) {
+export function HeightTerrain({ size, segments, height, color, seed, surface }: Props) {
   const geometry = useMemo(() => {
     const rng = mulberry32(seed)
     const geo = new PlaneGeometry(size, size, segments, segments)
@@ -33,10 +38,11 @@ export function HeightTerrain({ size, segments, height, color, seed }: Props) {
       for (let k = 0; k < 3; k++) col.set([c.r, c.g, c.b], (i + k) * 3)
     }
     flat.setAttribute('color', new BufferAttribute(col, 3))
+    if (surface) applySurface(flat, surface, height, rng)
     flat.computeVertexNormals()
     geo.dispose()
     return flat
-  }, [size, segments, height, color, seed])
+  }, [size, segments, height, color, seed, surface])
 
   // Rapier heightfields are column-major: heights[row + col * (rows + 1)], rows along Z and columns along X.
   const heights = useMemo(() => {
@@ -53,12 +59,29 @@ export function HeightTerrain({ size, segments, height, color, seed }: Props) {
 
   return (
     <>
-      <mesh geometry={geometry} receiveShadow>
-        <meshStandardMaterial vertexColors flatShading />
-      </mesh>
+      {surface ? (
+        // Plain colours stand in until the ground textures load, or if they can't.
+        <AssetBoundary fallback={<FlatColours geometry={geometry} />}>
+          <Suspense fallback={<FlatColours geometry={geometry} />}>
+            <mesh geometry={geometry} receiveShadow>
+              <TerrainMaterial layers={surface.layers} />
+            </mesh>
+          </Suspense>
+        </AssetBoundary>
+      ) : (
+        <FlatColours geometry={geometry} />
+      )}
       <RigidBody type="fixed" colliders={false}>
         <HeightfieldCollider args={[segments, segments, heights, { x: size, y: 1, z: size }]} />
       </RigidBody>
     </>
+  )
+}
+
+function FlatColours({ geometry }: { geometry: BufferGeometry }) {
+  return (
+    <mesh geometry={geometry} receiveShadow>
+      <meshStandardMaterial vertexColors flatShading />
+    </mesh>
   )
 }
