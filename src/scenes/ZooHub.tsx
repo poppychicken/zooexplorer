@@ -140,7 +140,7 @@ const PERCHES: [number, number, number][] = [
 /** A captured creature pottering around its enclosure. Flyers hop between perches and loop around the aviary. */
 function ExhibitResident({ def, half, seed }: { def: CreatureDef; half: number; seed: number }) {
   const group = useRef<Group>(null)
-  const motion = useRef({ speed: 0 })
+  const motion = useRef({ speed: 0, airborne: false })
   const flies = !!def.flies
   // Swimmers stay in the pool along the far side of the sea enclosures.
   const minZ = def.placeholder.shape === 'whale' ? 1.8 : -half
@@ -182,6 +182,7 @@ function ExhibitResident({ def, half, seed }: { def: CreatureDef; half: number; 
       }
       motion.current.speed = speed
     }
+    motion.current.airborne = flies && s.y > 0.3
     g.position.set(s.x, s.y, s.z)
     g.rotation.y = s.heading
   })

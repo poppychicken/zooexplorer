@@ -1,13 +1,13 @@
-import { Suspense, useMemo, useRef, type MutableRefObject } from 'react'
+import { Suspense, useEffect, useMemo, useRef, type MutableRefObject } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { useGLTF } from '@react-three/drei'
-import { Box3, ConeGeometry, Group, IcosahedronGeometry, Mesh, MeshStandardMaterial, SphereGeometry, Vector3, BoxGeometry, CylinderGeometry } from 'three'
-import { clone as cloneSkinned } from 'three/examples/jsm/utils/SkeletonUtils.js'
-import type { CreatureDef, PlaceholderStyle } from '../game/data/creatures'
+import { Box3, BufferGeometry, ConeGeometry, Group, IcosahedronGeometry, Mesh, MeshStandardMaterial, SphereGeometry, Vector3, BoxGeometry, CylinderGeometry, type Material, type Object3D } from 'three'
+import { GAIT, type CreatureDef, type PlaceholderStyle } from '../game/data/creatures'
+import { MOTION_STYLE, analyseRig, animateMaterial, animatedDepthMaterial, makeUniforms, stepMotion, type Rig } from './creatureMotion'
 import { useAssetIndex } from '../game/systems/assets'
 
 /** Shared motion input: current ground speed in m/s, read every frame to drive the walk cycle. */
-export type Motion = MutableRefObject<{ speed: number }>
+export type Motion = MutableRefObject<{ speed: number; airborne?: boolean }>
 
 const geo = {
   ico: new IcosahedronGeometry(1, 1),
@@ -598,38 +598,88 @@ export function PlaceholderModel({ def, motion }: { def: CreatureDef; motion: Mo
   }
 }
 
-function GlbModel({ url, height, yaw }: { url: string; height: number; yaw: number }) {
+interface BakedModel {
+  parts: { geometry: BufferGeometry; material: Material }[]
+  rig: Rig
+}
+
+const baked = new Map<string, BakedModel>()
+
+/**
+ * Bakes a generated model into creature space once: turned to face +Z, scaled to the creature's
+ * height, feet on y = 0 and centred, so the motion shader can find its legs, head and tail.
+ */
+function bake(scene: Object3D, key: string, height: number, yaw: number): BakedModel {
+  const hit = baked.get(key)
+  if (hit) return hit
+  const model = scene.clone()
+  model.rotation.y = (yaw * Math.PI) / 180
+  // Wrap it so the bounds below are measured after the turn.
+  const root = new Group()
+  root.add(model)
+  const box = new Box3().setFromObject(root)
+  const size = box.getSize(new Vector3())
+  const scale = size.y > 0 ? height / size.y : 1
+  const center = box.getCenter(new Vector3())
+  root.scale.setScalar(scale)
+  root.position.set(-center.x * scale, -box.min.y * scale, -center.z * scale)
+  root.updateMatrixWorld(true)
+
+  const parts: BakedModel['parts'] = []
+  const all: number[] = []
+  root.traverse((o) => {
+    const mesh = o as Mesh
+    if (!mesh.isMesh) return
+    const geometry = mesh.geometry.clone().applyMatrix4(mesh.matrixWorld)
+    const pos = geometry.attributes.position
+    for (let i = 0; i < pos.count; i++) all.push(pos.getX(i), pos.getY(i), pos.getZ(i))
+    for (const m of Array.isArray(mesh.material) ? mesh.material : [mesh.material]) parts.push({ geometry, material: m })
+  })
+  const result = { parts, rig: analyseRig(all) }
+  baked.set(key, result)
+  return result
+}
+
+function GlbModel({ url, def, yaw, motion }: { url: string; def: CreatureDef; yaw: number; motion: Motion }) {
   const { scene } = useGLTF(url)
-  const object = useMemo(() => {
-    const model = cloneSkinned(scene)
-    model.rotation.y = (yaw * Math.PI) / 180
-    // Wrap it so the bounds below are measured after the turn.
-    const obj = new Group()
-    obj.add(model)
-    const box = new Box3().setFromObject(obj)
-    const size = box.getSize(new Vector3())
-    const scale = size.y > 0 ? height / size.y : 1
-    obj.scale.setScalar(scale)
-    // Sit the model on the ground, centred on its footprint.
-    const center = box.getCenter(new Vector3())
-    obj.position.set(-center.x * scale, -box.min.y * scale, -center.z * scale)
-    obj.traverse((o) => {
-      const mesh = o as Mesh
-      if (!mesh.isMesh) return
+  const style = MOTION_STYLE[def.placeholder.shape]
+  const gait = GAIT[def.placeholder.shape]
+  const { parts, rig } = bake(scene, `${url}|${def.height}|${yaw}`, def.height, yaw)
+  const { uniforms, meshes } = useMemo(() => {
+    const uniforms = makeUniforms(rig, style)
+    const depth = animatedDepthMaterial(uniforms)
+    const meshes = parts.map(({ geometry, material }) => {
+      const mat = material.clone() as MeshStandardMaterial
+      // glTF defaults to fully metallic, which renders near-black without an environment map.
+      mat.metalness = 0
+      // Image-to-3D models ship without normals, and the shader bends the mesh anyway. Flat
+      // shading lights each facet from its current shape, and suits the low-poly look.
+      mat.flatShading = true
+      animateMaterial(mat, uniforms)
+      const mesh = new Mesh(geometry, mat)
       mesh.castShadow = true
-      for (const m of Array.isArray(mesh.material) ? mesh.material : [mesh.material]) {
-        const mat = m as MeshStandardMaterial
-        // glTF defaults to fully metallic, which renders near-black without an environment map.
-        mat.metalness = 0
-        // Image-to-3D models often ship without normals. Flat shading lights each facet from its
-        // own geometry, and suits the low-poly look anyway.
-        if (!mesh.geometry.attributes.normal) mat.flatShading = true
-        mat.needsUpdate = true
-      }
+      mesh.customDepthMaterial = depth
+      return mesh
     })
-    return obj
-  }, [scene, height, yaw])
-  return <primitive object={object} />
+    return { uniforms, meshes }
+  }, [parts, rig, style])
+  useEffect(
+    () => () => {
+      meshes.forEach((m) => (m.material as Material).dispose())
+      meshes[0]?.customDepthMaterial?.dispose()
+    },
+    [meshes],
+  )
+  useFrame((_, dt) => {
+    stepMotion(uniforms, rig, style, gait, motion.current.speed, !!motion.current.airborne, Math.min(dt, 0.1))
+  })
+  return (
+    <group>
+      {meshes.map((m, i) => (
+        <primitive key={i} object={m} />
+      ))}
+    </group>
+  )
 }
 
 /** Uses the generated GLB when the asset index lists it, otherwise the procedural placeholder. */
@@ -639,7 +689,7 @@ export function CreatureModel({ def, motion }: { def: CreatureDef; motion: Motio
   if (!index.models.has(def.id)) return placeholder
   return (
     <Suspense fallback={placeholder}>
-      <GlbModel url={`${import.meta.env.BASE_URL}${def.asset}`} height={def.height} yaw={index.yaw[def.id] ?? 0} />
+      <GlbModel url={`${import.meta.env.BASE_URL}${def.asset}`} def={def} yaw={index.yaw[def.id] ?? 0} motion={motion} />
     </Suspense>
   )
 }

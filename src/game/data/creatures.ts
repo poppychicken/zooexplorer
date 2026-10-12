@@ -25,6 +25,25 @@ export interface PlaceholderStyle {
   translucent?: boolean
 }
 
+/** Walking and running speeds in m/s. */
+export interface Gait {
+  walk: number
+  run: number
+}
+
+export const GAIT: Record<PlaceholderShape, Gait> = {
+  quadruped: { walk: 1.5, run: 7 },
+  bird: { walk: 1.2, run: 8 },
+  tortoise: { walk: 0.5, run: 1.6 },
+  lizard: { walk: 1, run: 4.5 },
+  serpent: { walk: 2, run: 6.5 },
+  kangaroo: { walk: 1.6, run: 9 },
+  echidna: { walk: 0.6, run: 1.8 },
+  penguin: { walk: 0.8, run: 2.6 },
+  seal: { walk: 0.9, run: 3.5 },
+  whale: { walk: 2.2, run: 5 },
+}
+
 export interface CreatureDef {
   id: string
   name: string
