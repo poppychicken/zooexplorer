@@ -3,6 +3,7 @@ import { HeightfieldCollider, RigidBody } from '@react-three/rapier'
 import { BufferAttribute, Color, PlaneGeometry, type BufferGeometry } from 'three'
 import { mulberry32 } from '../game/systems/rng'
 import { AssetBoundary } from './AssetBoundary'
+import { GrassField } from './GrassField'
 import { TerrainMaterial } from './TerrainMaterial'
 import { applySurface, type TerrainSurface } from './terrainSurface'
 
@@ -71,6 +72,7 @@ export function HeightTerrain({ size, segments, height, color, seed, surface }: 
       ) : (
         <FlatColours geometry={geometry} />
       )}
+      {surface?.grass && <GrassField surface={surface} height={height} size={size - 4} seed={seed} />}
       <RigidBody type="fixed" colliders={false}>
         <HeightfieldCollider args={[segments, segments, heights, { x: size, y: 1, z: size }]} />
       </RigidBody>
