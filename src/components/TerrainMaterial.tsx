@@ -24,7 +24,7 @@ vGroundPos = (modelMatrix * vec4(transformed, 1.0)).xyz;
 
 const DECLARE_FRAGMENT = /* glsl */ `
 uniform sampler2D uLayer[${MAX_LAYERS}];
-uniform float uTileSize;
+uniform float uTile[${MAX_LAYERS}];
 varying vec4 vSplatA;
 varying vec4 vSplatB;
 varying float vTint;
@@ -38,9 +38,9 @@ float gNoise(vec2 p) {
 }
 
 // Two samples at different scales and angles, mixed by slow noise, so the tile never visibly repeats.
-vec3 groundSample(sampler2D tex, vec2 p, float mixer) {
-  vec3 a = texture2D(tex, p / uTileSize).rgb;
-  vec2 q = mat2(0.8, -0.6, 0.6, 0.8) * p / (uTileSize * 2.7) + 0.37;
+vec3 groundSample(sampler2D tex, vec2 p, float tile, float mixer) {
+  vec3 a = texture2D(tex, p / tile).rgb;
+  vec2 q = mat2(0.8, -0.6, 0.6, 0.8) * p / (tile * 2.3) + 0.37;
   vec3 b = texture2D(tex, q).rgb;
   return mix(a, b, mixer);
 }
@@ -50,7 +50,7 @@ vec3 groundSample(sampler2D tex, vec2 p, float mixer) {
 const SAMPLE = Array.from({ length: MAX_LAYERS }, (_, i) => {
   const w = i < 4 ? `vSplatA[${i}]` : `vSplatB[${i - 4}]`
   return `  w = ${w} * (0.55 + 0.9 * gNoise(vGroundPos.xz * 0.35 + ${(i * 17.3).toFixed(1)}));
-  if (w > 0.002) { ground += w * groundSample(uLayer[${i}], vGroundPos.xz, mixer); total += w; }`
+  if (w > 0.002) { ground += w * groundSample(uLayer[${i}], vGroundPos.xz, uTile[${i}], mixer); total += w; }`
 }).join('\n')
 
 const FRAGMENT = /* glsl */ `
@@ -67,8 +67,23 @@ ${SAMPLE}
 }
 `
 
+/** How many metres one tile of each texture covers, so grass blades and stones come out life-sized. */
+const TILE_METRES: Record<GroundTexture, number> = {
+  grass: 1.5,
+  alpine_grass: 1.6,
+  forest_floor: 2.2,
+  dirt: 2.4,
+  gravel: 1.4,
+  rock: 3,
+  cracked_earth: 3,
+  desert_sand: 4,
+  red_sand: 3,
+  beach_sand: 3,
+  snow: 5,
+}
+
 /** A MeshStandardMaterial that blends `layers` (up to eight) by the geometry's splat weights. */
-export function TerrainMaterial({ layers, tileSize = 5 }: { layers: GroundTexture[]; tileSize?: number }) {
+export function TerrainMaterial({ layers }: { layers: GroundTexture[] }) {
   const textures = useTexture(layers.map(url)) as Texture[]
   const material = useMemo(() => {
     for (const t of textures) {
@@ -82,7 +97,7 @@ export function TerrainMaterial({ layers, tileSize = 5 }: { layers: GroundTextur
     const mat = new MeshStandardMaterial({ flatShading: true, roughness: 0.95, metalness: 0 })
     mat.onBeforeCompile = (shader) => {
       shader.uniforms.uLayer = { value: slots }
-      shader.uniforms.uTileSize = { value: tileSize }
+      shader.uniforms.uTile = { value: Array.from({ length: MAX_LAYERS }, (_, i) => TILE_METRES[layers[i] ?? layers[0]]) }
       shader.vertexShader = shader.vertexShader
         .replace('#include <common>', `#include <common>\n${DECLARE_VERTEX}`)
         .replace('#include <begin_vertex>', `#include <begin_vertex>\n${VERTEX}`)
@@ -92,6 +107,6 @@ export function TerrainMaterial({ layers, tileSize = 5 }: { layers: GroundTextur
     }
     mat.customProgramCacheKey = () => 'terrain-splat'
     return mat
-  }, [textures, tileSize])
+  }, [textures, layers])
   return <primitive object={material} attach="material" />
 }

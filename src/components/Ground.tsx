@@ -3,8 +3,11 @@ import { CuboidCollider, RigidBody } from '@react-three/rapier'
 import { BufferAttribute, Color, PlaneGeometry, type BufferGeometry } from 'three'
 import { mulberry32 } from '../game/systems/rng'
 import { AssetBoundary } from './AssetBoundary'
+import { GrassField } from './GrassField'
 import { TerrainMaterial } from './TerrainMaterial'
 import { applySurface, type TerrainSurface } from './terrainSurface'
+
+const flatHeight = () => 0
 
 /** Flat physics floor with a faceted, vertex-coloured visual surface. */
 export function Ground({ size, colors, seed, segments = 60, surface }: { size: number; colors: string[]; seed: number; segments?: number; surface?: TerrainSurface }) {
@@ -32,7 +35,7 @@ export function Ground({ size, colors, seed, segments = 60, surface }: { size: n
       for (let k = 0; k < 3; k++) col.set([c.r, c.g, c.b], (i + k) * 3)
     }
     geo.setAttribute('color', new BufferAttribute(col, 3))
-    if (surface) applySurface(geo, surface, () => 0, rng)
+    if (surface) applySurface(geo, surface, flatHeight, rng)
     geo.computeVertexNormals()
     return geo
   }, [size, colors, seed, segments, surface])
@@ -51,6 +54,7 @@ export function Ground({ size, colors, seed, segments = 60, surface }: { size: n
       ) : (
         <FlatColours geometry={geometry} />
       )}
+      {surface?.grass && <GrassField surface={surface} height={flatHeight} size={size - 4} seed={seed} />}
       <RigidBody type="fixed" colliders={false}>
         <CuboidCollider args={[size / 2, 0.5, size / 2]} position={[0, -0.5, 0]} />
       </RigidBody>

@@ -106,6 +106,7 @@ export function biomeSurface(biome: BiomeDef, props: PlacedProp[]): TerrainSurfa
     case 'forest':
       return {
         layers: ['grass', 'forest_floor', 'dirt', 'rock'],
+        grass: { on: { grass: 1, forest_floor: 0.3, dirt: 0.05 }, density: 5, base: '#4a6a2a', tip: '#9cbc55', height: 0.4 },
         weights: (x, z) => {
           const litter = Math.max(underTree(x, z) * 1.6, smoothstep(0.55, 0.75, patch(x, z, 0.035, 1)))
           return [1 - litter, litter * 1.4, smoothstep(0.7, 0.85, patch(x, z, 0.06, 4)) * 1.5, byRock(x, z) * 0.8]
@@ -114,16 +115,19 @@ export function biomeSurface(biome: BiomeDef, props: PlacedProp[]): TerrainSurfa
     case 'canyon':
       return {
         layers: ['desert_sand', 'cracked_earth', 'rock', 'dirt'],
+        grass: { on: { desert_sand: 0.06, cracked_earth: 0.03, dirt: 0.12 }, density: 2, base: '#8a7440', tip: '#e2cc88', height: 0.32 },
         weights: (x, z) => [1, smoothstep(0.55, 0.72, patch(x, z, 0.03, 2)) * 1.6, byRock(x, z) * 1.3, underTree(x, z) * 0.8],
       }
     case 'outback':
       return {
         layers: ['red_sand', 'cracked_earth', 'dirt', 'rock'],
+        grass: { on: { red_sand: 0.12, dirt: 0.18, cracked_earth: 0.04 }, density: 2, base: '#856c38', tip: '#dcc074', height: 0.36 },
         weights: (x, z) => [1, smoothstep(0.6, 0.78, patch(x, z, 0.03, 3)) * 1.4, underTree(x, z) * 1.2 + smoothstep(0.7, 0.85, patch(x, z, 0.05, 6)), byRock(x, z)],
       }
     case 'mountain':
       return {
         layers: ['alpine_grass', 'rock', 'snow', 'dirt'],
+        grass: { on: { alpine_grass: 1, dirt: 0.1 }, density: 4.5, base: '#4f6a2e', tip: '#aabf6a', height: 0.28 },
         weights: (x, z, h, slope) => {
           const snow = smoothstep(10.5, 13.5, h) + (h > 6 ? smoothstep(0.82, 0.92, patch(x, z, 0.05, 7)) : 0)
           const rock = Math.max(smoothstep(0.35, 0.6, slope), smoothstep(8, 9.5, h) * (1 - snow), byRock(x, z))
@@ -134,6 +138,7 @@ export function biomeSurface(biome: BiomeDef, props: PlacedProp[]): TerrainSurfa
       const [lx, lz] = biome.legendary.lair
       return {
         layers: ['beach_sand', 'grass', 'rock', 'dirt'],
+        grass: { on: { grass: 0.9, beach_sand: 0.04 }, density: 3.5, base: '#5f6e38', tip: '#c6c88a', height: 0.45 },
         weights: (x, z, h) => {
           const shore = Math.max(smoothstep(-biome.halfSize + 32, -biome.halfSize + 20, z), smoothstep(LAGOON_RADIUS + 16, LAGOON_RADIUS + 6, Math.hypot(x - lx, z - lz)))
           const sand = Math.max(shore, smoothstep(0.42, 0.28, h))

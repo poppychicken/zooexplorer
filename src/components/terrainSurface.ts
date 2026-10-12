@@ -13,6 +13,36 @@ export interface TerrainSurface {
   layers: GroundTexture[]
   /** Unnormalised weight of each layer at a point; `slope` is the ground's rise per metre. */
   weights: (x: number, z: number, h: number, slope: number) => number[]
+  /** 3D grass clumps growing out of the ground (see GrassField). */
+  grass?: GrassSpec
+}
+
+export interface GrassSpec {
+  /** How much grass grows on each texture, from 0 (none) to 1 (thick). */
+  on: Partial<Record<GroundTexture, number>>
+  /** Clumps per square metre on fully grassy ground. */
+  density: number
+  /** Blade colour at the root and at the tip. */
+  base: string
+  tip: string
+  /** Typical clump height in metres. */
+  height: number
+  /** Spots to keep clear, e.g. enclosure floors. */
+  exclude?: (x: number, z: number) => boolean
+}
+
+/** How grassy a point is: the surface's layer weights, normalised, times how much grass each layer grows. */
+export function grassiness(surface: TerrainSurface, x: number, z: number, h: number, slope: number): number {
+  if (!surface.grass) return 0
+  const w = surface.weights(x, z, h, slope)
+  let sum = 0
+  let grass = 0
+  surface.layers.forEach((layer, i) => {
+    const v = Math.max(0, w[i] ?? 0)
+    sum += v
+    grass += v * (surface.grass!.on[layer] ?? 0)
+  })
+  return sum > 0 ? grass / sum : 0
 }
 
 /** Smooth, cheap 2D noise in [0, 1] for patchy ground. */

@@ -136,6 +136,10 @@ Where each texture goes is set per biome in `biomeSurface` (`biomeTerrain.ts`) a
 - **Sea Coast:** sand along the water.
 - **Zoo:** gravel paths, with each precinct on its biome's ground.
 
+Each texture has a real-world tile size (`TILE_METRES` in `TerrainMaterial.tsx`), so grass blades, pebbles and leaves come out life-sized.
+
+**3D grass.** `GrassField` grows instanced grass clumps out of the ground. Each surface's `grass` spec sets how much grows on each texture, plus density, colours and height. So the forest, mountain meadow and zoo lawns are thick with it, the outback and canyon get sparse dry tufts, and none grows on paths, sand, snow or inside enclosures. Clumps are placed once, in 10 m chunks. Only chunks within about 34 m of the camera are drawn, and blades shrink into the ground near that edge and sway in the wind.
+
 Until the textures load, or if they fail, the ground falls back to its flat colours.
 
 ## Deploying (GitHub Pages)

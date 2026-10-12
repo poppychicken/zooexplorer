@@ -268,6 +268,15 @@ const HUB_LAYERS: GroundTexture[] = ['grass', 'gravel', 'forest_floor', 'desert_
 /** Ground textures for the zoo: gravel paths and plazas, precinct grounds, sand at the shore, grass elsewhere. */
 export const HUB_SURFACE: TerrainSurface = {
   layers: HUB_LAYERS,
+  grass: {
+    on: { grass: 1, alpine_grass: 0.8, forest_floor: 0.3, desert_sand: 0.08, red_sand: 0.1, beach_sand: 0.03 },
+    density: 4.5,
+    base: '#4a6a2a',
+    tip: '#9cbc55',
+    height: 0.36,
+    // Enclosures have their own floors, and the entrance plaza is paved.
+    exclude: (x, z) => PRECINCTS.some((p) => Math.max(Math.abs(x - p.center[0]), Math.abs(z - p.center[1])) < 17) || Math.hypot(x, z + 56) < 13,
+  },
   weights: (x, z, h) => {
     const w = new Array<number>(HUB_LAYERS.length).fill(0)
     const add = (t: GroundTexture, v: number) => (w[HUB_LAYERS.indexOf(t)] += v)
