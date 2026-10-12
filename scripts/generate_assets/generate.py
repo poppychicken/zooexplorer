@@ -27,11 +27,14 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import base64
 import json
 import os
 import shutil
 import subprocess
 import sys
+import time
+import urllib.error
 import urllib.request
 from pathlib import Path
 from typing import Any
@@ -54,6 +57,84 @@ def load_env() -> None:
             continue
         key, value = line.split("=", 1)
         os.environ.setdefault(key.strip(), value.strip().strip('"').strip("'"))
+
+
+API = "https://api.replicate.com/v1"
+
+
+def api(method: str, url: str, body: dict | None = None) -> dict:
+    """Call the Replicate HTTP API. urllib honours HTTPS_PROXY, which the replicate SDK does not."""
+    req = urllib.request.Request(
+        url if url.startswith("http") else f"{API}{url}",
+        method=method,
+        data=json.dumps(body).encode() if body is not None else None,
+        headers={
+            "Authorization": f"Bearer {os.environ['REPLICATE_API_TOKEN']}",
+            "Content-Type": "application/json",
+            # Cloudflare in front of the API rejects urllib's default user agent.
+            "User-Agent": "zoo-explorer-assets/1.0",
+        },
+    )
+    for attempt in range(6):
+        try:
+            with urllib.request.urlopen(req, timeout=60) as resp:
+                return json.loads(resp.read())
+        except urllib.error.HTTPError as e:
+            detail = e.read().decode(errors="replace")
+            # Accounts with under $5 credit are throttled to a handful of predictions a minute.
+            if e.code == 429 and attempt < 5:
+                try:
+                    wait = float(json.loads(detail).get("retry_after", 10))
+                except ValueError:
+                    wait = 10
+                print(f"    rate limited, retrying in {wait + 1:.0f} s")
+                time.sleep(wait + 1)
+                continue
+            raise RuntimeError(f"Replicate API {e.code}: {detail[:500]}") from None
+        except urllib.error.URLError as e:
+            # Dropped connections happen on long runs; back off and try again.
+            if attempt == 5:
+                raise
+            print(f"    connection error ({e.reason}), retrying")
+            time.sleep(2**attempt)
+    raise AssertionError("unreachable")
+
+
+def run_model(ref: str, inputs: dict, timeout: float = 900) -> Any:
+    """Start a prediction for `owner/name` (or `owner/name:version`) and poll until it finishes."""
+    name, _, version = ref.partition(":")
+    if not version:
+        model = api("GET", f"/models/{name}")
+        # Official models run by name; community models need their latest version id.
+        version = None if model.get("is_official") else model["latest_version"]["id"]
+    if version:
+        pred = api("POST", "/predictions", {"version": version, "input": inputs})
+    else:
+        pred = api("POST", f"/models/{name}/predictions", {"input": inputs})
+    deadline = time.monotonic() + timeout
+    while pred["status"] not in ("succeeded", "failed", "canceled"):
+        if time.monotonic() > deadline:
+            api("POST", pred["urls"]["cancel"])
+            raise RuntimeError(f"{ref} timed out after {timeout:.0f} s")
+        time.sleep(3)
+        pred = api("GET", pred["urls"]["get"])
+    if pred["status"] != "succeeded":
+        raise RuntimeError(f"{ref} {pred['status']}: {pred.get('error')}")
+    return pred["output"]
+
+
+def data_uri(path: Path, size: int = 512) -> str:
+    """Inline the reference as a small JPEG: image-to-3D models downscale to ~512 px anyway,
+    and a small request body is far more reliable than uploading the full PNG."""
+    import io
+
+    from PIL import Image
+
+    img = Image.open(path).convert("RGB")
+    img.thumbnail((size, size), Image.LANCZOS)
+    buf = io.BytesIO()
+    img.save(buf, "JPEG", quality=92)
+    return "data:image/jpeg;base64," + base64.b64encode(buf.getvalue()).decode()
 
 
 def read_output(output: Any, suffix: str | None = None) -> bytes:
@@ -92,7 +173,8 @@ def read_output(output: Any, suffix: str | None = None) -> bytes:
     first = candidates[0]
     if hasattr(first, "read"):
         return first.read()
-    with urllib.request.urlopen(url_of(first)) as resp:
+    req = urllib.request.Request(url_of(first), headers={"User-Agent": "zoo-explorer-assets/1.0"})
+    with urllib.request.urlopen(req, timeout=120) as resp:
         return resp.read()
 
 
@@ -127,10 +209,13 @@ def optimize_glb(src: Path, dest: Path, simplify_ratio: float, texture_size: int
     return True
 
 
-def write_index() -> None:
+def write_index(creatures: list[dict]) -> None:
     models = sorted(p.stem for p in OUT_DIR.glob("*.glb"))
     icons = sorted(p.stem for p in OUT_DIR.glob("*.png"))
-    (OUT_DIR / "index.json").write_text(json.dumps({"models": models, "icons": icons}, indent=2) + "\n")
+    # Generated models face whichever way the 3D model chose; "yaw" in the manifest turns them to face +Z.
+    yaw = {c["id"]: c["yaw"] for c in creatures if c.get("yaw") and c["id"] in models}
+    data = {"models": models, "icons": icons, "yaw": yaw}
+    (OUT_DIR / "index.json").write_text(json.dumps(data, indent=2) + "\n")
     print(f"Wrote index.json: {len(models)} models, {len(icons)} icons")
 
 
@@ -169,17 +254,15 @@ def main() -> int:
             print(f"• would generate {c['id']}: {c['prompt']}, {manifest['style']}")
         return 0
     if not todo:
-        write_index()
+        write_index(manifest["creatures"])
         return 0
 
     load_env()
     if not os.environ.get("REPLICATE_API_TOKEN"):
         print("REPLICATE_API_TOKEN is not set. Copy .env.example to .env and add your token.")
         return 1
-    import replicate  # imported late so --dry-run works without the package
 
     image_model = manifest["image_model"]
-    model_3d = manifest["model_3d"]
     failures = []
 
     for c in todo:
@@ -192,7 +275,7 @@ def main() -> int:
             if args.force or not reference.exists():
                 prompt = f"{c['prompt']}, {manifest['style']}"
                 print(f"    reference image via {image_model['ref']}")
-                out = replicate.run(image_model["ref"], input={"prompt": prompt, **image_model.get("input", {})})
+                out = run_model(image_model["ref"], {"prompt": prompt, **image_model.get("input", {})})
                 reference.write_bytes(read_output(out))
             make_icon(reference, OUT_DIR / f"{cid}.png", manifest.get("icon_size", 256))
             print("    icon saved")
@@ -200,12 +283,13 @@ def main() -> int:
             if args.skip_3d:
                 continue
 
+            # A creature can swap in a different image-to-3D model (e.g. one that keeps thin antlers).
+            model_3d = c.get("model_3d") or manifest["model_3d"]
             raw = cache / "raw.glb"
             if args.force or not raw.exists():
                 print(f"    3D model via {model_3d['ref']} (this can take a few minutes)")
-                with reference.open("rb") as f:
-                    image_value: Any = [f] if model_3d.get("image_as_list") else f
-                    out = replicate.run(model_3d["ref"], input={model_3d["image_key"]: image_value, **model_3d.get("input", {})})
+                image_value: Any = [data_uri(reference)] if model_3d.get("image_as_list") else data_uri(reference)
+                out = run_model(model_3d["ref"], {model_3d["image_key"]: image_value, **model_3d.get("input", {})})
                 raw.write_bytes(read_output(out, ".glb"))
             dest = OUT_DIR / f"{cid}.glb"
             if args.no_optimize or not optimize_glb(raw, dest, c.get("simplify_ratio", 0.5), manifest.get("texture_size", 1024)):
@@ -215,7 +299,7 @@ def main() -> int:
             print(f"    ✗ failed: {e}")
             failures.append(cid)
 
-    write_index()
+    write_index(manifest["creatures"])
     if failures:
         print(f"Failed: {', '.join(failures)}. Re-run to retry; finished steps are cached.")
         return 1

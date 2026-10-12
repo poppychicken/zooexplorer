@@ -3,31 +3,13 @@ import { useFrame } from '@react-three/fiber'
 import { BallCollider, RigidBody, type RapierRigidBody } from '@react-three/rapier'
 import { Group, Vector3 } from 'three'
 import { CreatureModel } from './CreatureModel'
-import { CREATURE_BY_ID, type CreatureDef } from '../game/data/creatures'
+import { CREATURE_BY_ID, GAIT, type CreatureDef, type Gait } from '../game/data/creatures'
 import { BAIT } from '../game/data/shop'
 import { useGame, useSession } from '../game/state/store'
 import { playCall, playUi } from '../game/systems/audio'
 import { isDown } from '../game/systems/input'
 import { addTrack, baits, creatures, now, player, terrain, type CreatureRuntime } from '../game/systems/world'
 import { startFlee } from '../game/systems/hunt'
-
-interface Gait {
-  walk: number
-  run: number
-}
-
-const GAIT: Record<CreatureDef['placeholder']['shape'], Gait> = {
-  quadruped: { walk: 1.5, run: 7 },
-  bird: { walk: 1.2, run: 8 },
-  tortoise: { walk: 0.5, run: 1.6 },
-  lizard: { walk: 1, run: 4.5 },
-  serpent: { walk: 2, run: 6.5 },
-  kangaroo: { walk: 1.6, run: 9 },
-  echidna: { walk: 0.6, run: 1.8 },
-  penguin: { walk: 0.8, run: 2.6 },
-  seal: { walk: 0.9, run: 3.5 },
-  whale: { walk: 2.2, run: 5 },
-}
 
 /** Height a creature stands at: the ground, except swimmers float at the water surface. */
 function groundUnder(def: CreatureDef, x: number, z: number): number {

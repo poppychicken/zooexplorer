@@ -1,4 +1,49 @@
 {
-  "models": [],
-  "icons": []
+  "models": [
+    "aurora_ibex",
+    "aurora_leviathan",
+    "australian_sea_lion",
+    "barn_owl",
+    "desert_tortoise",
+    "european_badger",
+    "fennec_fox",
+    "gila_monster",
+    "glassdune_serpent",
+    "himalayan_tahr",
+    "leopard_seal",
+    "little_penguin",
+    "moss_antler_stag",
+    "opal_backed_thylacine",
+    "red_fox",
+    "red_kangaroo",
+    "red_panda",
+    "short_beaked_echidna",
+    "snow_leopard",
+    "thorny_devil"
+  ],
+  "icons": [
+    "aurora_ibex",
+    "aurora_leviathan",
+    "australian_sea_lion",
+    "barn_owl",
+    "desert_tortoise",
+    "european_badger",
+    "fennec_fox",
+    "gila_monster",
+    "glassdune_serpent",
+    "himalayan_tahr",
+    "leopard_seal",
+    "little_penguin",
+    "moss_antler_stag",
+    "opal_backed_thylacine",
+    "red_fox",
+    "red_kangaroo",
+    "red_panda",
+    "short_beaked_echidna",
+    "snow_leopard",
+    "thorny_devil"
+  ],
+  "yaw": {
+    "gila_monster": -90
+  }
 }

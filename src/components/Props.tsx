@@ -1,4 +1,4 @@
-import { useLayoutEffect, useMemo, useRef } from 'react'
+import { Suspense, useLayoutEffect, useMemo, useRef } from 'react'
 import { CuboidCollider, CylinderCollider, RigidBody } from '@react-three/rapier'
 import {
   BoxGeometry,
@@ -15,6 +15,7 @@ import {
   Vector3,
 } from 'three'
 import type { PropKind } from '../game/data/biomes'
+import { KIT, KitField } from './NatureKit'
 
 export interface PlacedProp {
   kind: PropKind
@@ -120,6 +121,14 @@ export const PROP_PARTS: Record<PropKind, Part[]> = {
     { geo: g.cone, color: '#98a062', pos: [0.2, 0.25, 0.1], scale: [0.2, 0.5, 0.2], rot: [-0.2, 0, -0.2] },
     { geo: g.cone, color: '#b4bb80', pos: [-0.2, 0.25, -0.1], scale: [0.2, 0.5, 0.2], rot: [0.1, 0, 0.3] },
   ],
+  pebble: [{ geo: g.dodeca, color: '#8a8a86', pos: [0, 0.05, 0], scale: [0.18, 0.1, 0.15] }],
+  fern: [{ geo: g.cone, color: '#3f7a37', pos: [0, 0.25, 0], scale: [0.5, 0.5, 0.5] }],
+  grass: [{ geo: g.cone, color: '#5d9a45', pos: [0, 0.25, 0], scale: [0.2, 0.5, 0.2] }],
+  flowers: [
+    { geo: g.cylThin, color: '#4f8a3c', pos: [0, 0.25, 0], scale: [0.05, 0.5, 0.05] },
+    { geo: g.ico, color: '#e8c840', pos: [0, 0.55, 0], scale: [0.12, 0.1, 0.12] },
+  ],
+  agave: [{ geo: g.cone, color: '#7a9a5a', pos: [0, 0.6, 0], scale: [0.8, 1.2, 0.8] }],
   deadtree: [
     { geo: g.trunk, color: '#7a6450', pos: [0, 1.3, 0], scale: [0.9, 2.6, 0.9] },
     { geo: g.trunk, color: '#7a6450', pos: [0.5, 2.4, 0], scale: [0.4, 1.2, 0.4], rot: [0, 0, -0.8] },
@@ -146,6 +155,11 @@ const PROP_COLLIDER: Record<PropKind, { halfHeight: number; radius: number } | n
   peak: { halfHeight: 22, radius: 24 },
   coastrock: { halfHeight: 0.6, radius: 1.2 },
   dunegrass: null,
+  pebble: null,
+  fern: null,
+  grass: null,
+  flowers: null,
+  agave: null,
 }
 
 const m4 = new Matrix4()
@@ -183,15 +197,27 @@ function PartInstances({ part, props }: { part: Part; props: PlacedProp[] }) {
   )
 }
 
-export function PropField({ props, colliders: withColliders = true }: { props: PlacedProp[]; colliders?: boolean }) {
-  const byKind = useMemo(() => {
-    const map = new Map<PropKind, PlacedProp[]>()
+function ProceduralProps({ byKind }: { byKind: Map<PropKind, PlacedProp[]> }) {
+  return (
+    <>
+      {[...byKind.entries()].map(([kind, list]) =>
+        PROP_PARTS[kind].map((part, j) => <PartInstances key={`${kind}-${j}`} part={part} props={list} />),
+      )}
+    </>
+  )
+}
+
+export function PropField({ props, colliders: withColliders = true, rockTint }: { props: PlacedProp[]; colliders?: boolean; rockTint?: string }) {
+  const [kit, procedural] = useMemo(() => {
+    const kit = new Map<PropKind, PlacedProp[]>()
+    const procedural = new Map<PropKind, PlacedProp[]>()
     for (const p of props) {
+      const map = KIT[p.kind] ? kit : procedural
       const list = map.get(p.kind) ?? []
       list.push(p)
       map.set(p.kind, list)
     }
-    return map
+    return [kit, procedural]
   }, [props])
 
   const colliders = useMemo(
@@ -207,9 +233,11 @@ export function PropField({ props, colliders: withColliders = true }: { props: P
 
   return (
     <>
-      {[...byKind.entries()].map(([kind, list]) =>
-        PROP_PARTS[kind].map((part, j) => <PartInstances key={`${kind}-${j}`} part={part} props={list} />),
-      )}
+      <ProceduralProps byKind={procedural} />
+      {/* Scenery models load in the background; the procedural shapes stand in until they arrive. */}
+      <Suspense fallback={<ProceduralProps byKind={kit} />}>
+        <KitField byKind={kit} rockTint={rockTint} />
+      </Suspense>
       {colliders.length > 0 && (
         <RigidBody type="fixed" colliders={false}>
           {colliders}

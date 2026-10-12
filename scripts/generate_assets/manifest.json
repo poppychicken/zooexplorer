@@ -18,7 +18,8 @@
       "texture_size": 1024,
       "mesh_simplify": 0.95,
       "ss_sampling_steps": 12,
-      "slat_sampling_steps": 12
+      "slat_sampling_steps": 12,
+      "generate_color": false
     }
   },
   "icon_size": 256,
@@ -45,7 +46,7 @@
     {
       "id": "moss_antler_stag",
       "name": "Moss-Antler Stag",
-      "prompt": "a majestic fantasy stag with huge branching antlers covered in glowing green moss and tiny glowing flowers, ancient and mystical",
+      "prompt": "a majestic fantasy stag with huge thick chunky branching antlers covered in glowing green moss, the antlers are solid and bulky, ancient and mystical",
       "simplify_ratio": 0.6
     },
     {
@@ -64,7 +65,8 @@
       "id": "gila_monster",
       "name": "Gila monster",
       "prompt": "a Gila monster lizard with beaded black skin and bright orange-pink bands, low to the ground, long thick tail",
-      "simplify_ratio": 0.5
+      "simplify_ratio": 0.5,
+      "yaw": -90
     },
     {
       "id": "glassdune_serpent",

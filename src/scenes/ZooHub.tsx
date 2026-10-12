@@ -140,7 +140,7 @@ const PERCHES: [number, number, number][] = [
 /** A captured creature pottering around its enclosure. Flyers hop between perches and loop around the aviary. */
 function ExhibitResident({ def, half, seed }: { def: CreatureDef; half: number; seed: number }) {
   const group = useRef<Group>(null)
-  const motion = useRef({ speed: 0 })
+  const motion = useRef({ speed: 0, airborne: false })
   const flies = !!def.flies
   // Swimmers stay in the pool along the far side of the sea enclosures.
   const minZ = def.placeholder.shape === 'whale' ? 1.8 : -half
@@ -182,6 +182,7 @@ function ExhibitResident({ def, half, seed }: { def: CreatureDef; half: number; 
       }
       motion.current.speed = speed
     }
+    motion.current.airborne = flies && s.y > 0.3
     g.position.set(s.x, s.y, s.z)
     g.rotation.y = s.heading
   })
@@ -475,6 +476,17 @@ function Bushland() {
       if (!isOpenGround(x, z)) continue
       const r = rng()
       out.push({ kind: r < 0.45 ? 'oak' : r < 0.7 ? 'pine' : 'bush', x, z, y: hubHeight(x, z) - 0.05, scale: range(rng, 0.7, 1.3), rot: rng() * 6.28, tint: rng() - 0.5 })
+    }
+    // Ferns, grass and wildflowers under the trees.
+    tries = 0
+    let cover = 0
+    while (cover < 260 && tries++ < 6000) {
+      const x = range(rng, BOUNDS.minX, BOUNDS.maxX)
+      const z = range(rng, BOUNDS.minZ, BOUNDS.maxZ)
+      if (!isOpenGround(x, z)) continue
+      const r = rng()
+      out.push({ kind: r < 0.4 ? 'grass' : r < 0.7 ? 'fern' : r < 0.92 ? 'flowers' : 'rock', x, z, y: hubHeight(x, z), scale: range(rng, 0.7, 1.3), rot: rng() * 6.28, tint: rng() - 0.5 })
+      cover++
     }
     // Tree line beyond the north and east walls (the harbour bounds the south and west).
     for (let i = 0; i < 90; i++) {

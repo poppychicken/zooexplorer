@@ -398,7 +398,7 @@ export function Biome({ biomeId }: { biomeId: BiomeId }) {
           <meshStandardMaterial color="#3fa5b8" transparent opacity={0.78} roughness={0.25} metalness={0.1} />
         </mesh>
       )}
-      <PropField props={props} />
+      <PropField props={props} rockTint={biome.rockTint} />
       <Bounds half={h} height={30} />
       <Lair biome={biome} />
       <ReturnSign biome={biome} />
