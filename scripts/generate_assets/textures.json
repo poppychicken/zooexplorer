@@ -1,0 +1,60 @@
+{
+  "_comment": "Ground textures for the terrain shader. Edit prompts here, then run textures.py. Optional per-texture \"saturation\" scales colour intensity (1 = unchanged).",
+  "style": "uniform surface texture filling the entire frame edge to edge, viewed from directly above, even soft lighting, no border, no frame, no vignette, no tiles, no grid, no horizon, hand-painted stylized look with soft painterly detail, natural muted colours",
+  "image_model": {
+    "ref": "black-forest-labs/flux-1.1-pro",
+    "input": {
+      "aspect_ratio": "1:1",
+      "output_format": "png",
+      "safety_tolerance": 5
+    }
+  },
+  "size": 1024,
+  "textures": [
+    {
+      "id": "grass",
+      "prompt": "lush meadow grass, dense short green grass blades of varied length"
+    },
+    {
+      "id": "forest_floor",
+      "prompt": "forest floor, soft green moss with fallen brown leaves, pine needles and small twigs"
+    },
+    {
+      "id": "dirt",
+      "prompt": "packed brown earth path with small scattered pebbles"
+    },
+    {
+      "id": "rock",
+      "prompt": "weathered grey rock surface with fine cracks and small patches of moss"
+    },
+    {
+      "id": "desert_sand",
+      "prompt": "warm orange desert sand with soft wind ripples"
+    },
+    {
+      "id": "cracked_earth",
+      "prompt": "dry cracked red-orange clay earth"
+    },
+    {
+      "id": "red_sand",
+      "prompt": "dusty Australian outback ground, muted rusty red-brown earth with darker patches, small scattered pebbles and specks of dry grass",
+      "saturation": 0.62
+    },
+    {
+      "id": "alpine_grass",
+      "prompt": "short alpine grass with small grey rocks and tiny white wildflowers"
+    },
+    {
+      "id": "snow",
+      "prompt": "fresh white snow with soft gentle drifts and faint blue shading"
+    },
+    {
+      "id": "beach_sand",
+      "prompt": "pale golden beach sand with tiny shell fragments"
+    },
+    {
+      "id": "gravel",
+      "prompt": "light beige gravel footpath of small rounded stones"
+    }
+  ]
+}
