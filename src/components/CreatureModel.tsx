@@ -3,6 +3,7 @@ import { useFrame } from '@react-three/fiber'
 import { useGLTF } from '@react-three/drei'
 import { Box3, BufferGeometry, ConeGeometry, Group, IcosahedronGeometry, Mesh, MeshStandardMaterial, SphereGeometry, Vector3, BoxGeometry, CylinderGeometry, type Material, type Object3D } from 'three'
 import { GAIT, type CreatureDef, type PlaceholderStyle } from '../game/data/creatures'
+import { bakeGeometry } from './bakeGeometry'
 import { MOTION_STYLE, analyseRig, animateMaterial, animatedDepthMaterial, makeUniforms, stepMotion, type Rig } from './creatureMotion'
 import { useAssetIndex } from '../game/systems/assets'
 
@@ -630,7 +631,7 @@ function bake(scene: Object3D, key: string, height: number, yaw: number): BakedM
   root.traverse((o) => {
     const mesh = o as Mesh
     if (!mesh.isMesh) return
-    const geometry = mesh.geometry.clone().applyMatrix4(mesh.matrixWorld)
+    const geometry = bakeGeometry(mesh.geometry, mesh.matrixWorld)
     const pos = geometry.attributes.position
     for (let i = 0; i < pos.count; i++) all.push(pos.getX(i), pos.getY(i), pos.getZ(i))
     for (const m of Array.isArray(mesh.material) ? mesh.material : [mesh.material]) parts.push({ geometry, material: m })

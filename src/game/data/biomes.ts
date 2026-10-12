@@ -19,6 +19,11 @@ export type PropKind =
   | 'peak'
   | 'coastrock'
   | 'dunegrass'
+  | 'pebble'
+  | 'fern'
+  | 'grass'
+  | 'flowers'
+  | 'agave'
 
 export interface PropScatter {
   kind: PropKind
@@ -54,6 +59,8 @@ export interface BiomeDef {
   boundary: 'trees' | 'cliffs' | 'peaks' | 'ocean'
   /** Ground shape: flat, rolling hills, or a coast with a lagoon around the legendary's lair. */
   terrain?: 'flat' | 'hills' | 'coast'
+  /** Colour multiplied into the grey scenery rocks, e.g. red for desert sandstone. */
+  rockTint?: string
 }
 
 export const BIOMES: BiomeDef[] = [
@@ -75,6 +82,10 @@ export const BIOMES: BiomeDef[] = [
       { kind: 'rock', count: 50, minScale: 0.5, maxScale: 1.4 },
       { kind: 'log', count: 20, minScale: 0.8, maxScale: 1.2 },
       { kind: 'mushroom', count: 80, minScale: 0.6, maxScale: 1.2 },
+      { kind: 'fern', count: 220, minScale: 0.7, maxScale: 1.5 },
+      { kind: 'grass', count: 260, minScale: 0.7, maxScale: 1.3 },
+      { kind: 'flowers', count: 140, minScale: 0.6, maxScale: 1.1 },
+      { kind: 'pebble', count: 60, minScale: 1, maxScale: 3 },
     ],
     population: 10,
     spawns: [
@@ -104,7 +115,10 @@ export const BIOMES: BiomeDef[] = [
       { kind: 'mesa', count: 10, minScale: 0.8, maxScale: 1.4 },
       { kind: 'deadtree', count: 20, minScale: 0.7, maxScale: 1.2 },
       { kind: 'bush', count: 40, minScale: 0.4, maxScale: 0.8 },
+      { kind: 'agave', count: 40, minScale: 0.6, maxScale: 1.3 },
+      { kind: 'spinifex', count: 90, minScale: 0.6, maxScale: 1.1 },
     ],
+    rockTint: '#e0a070',
     population: 10,
     spawns: [
       { creatureId: 'fennec_fox', weight: 5 },
@@ -133,7 +147,9 @@ export const BIOMES: BiomeDef[] = [
       { kind: 'rock', count: 60, minScale: 0.5, maxScale: 1.3 },
       { kind: 'boulder', count: 25, minScale: 0.6, maxScale: 1.6 },
       { kind: 'deadtree', count: 15, minScale: 0.7, maxScale: 1.1 },
+      { kind: 'pebble', count: 60, minScale: 1, maxScale: 3 },
     ],
+    rockTint: '#d98a62',
     population: 10,
     spawns: [
       { creatureId: 'red_kangaroo', weight: 5 },
@@ -161,6 +177,9 @@ export const BIOMES: BiomeDef[] = [
       { kind: 'rock', count: 80, minScale: 0.5, maxScale: 1.5 },
       { kind: 'boulder', count: 40, minScale: 0.6, maxScale: 1.8 },
       { kind: 'bush', count: 50, minScale: 0.4, maxScale: 0.8 },
+      { kind: 'grass', count: 180, minScale: 0.6, maxScale: 1.1 },
+      { kind: 'flowers', count: 60, minScale: 0.5, maxScale: 0.9 },
+      { kind: 'pebble', count: 80, minScale: 1, maxScale: 3 },
     ],
     population: 9,
     spawns: [
@@ -190,7 +209,9 @@ export const BIOMES: BiomeDef[] = [
       { kind: 'bush', count: 50, minScale: 0.5, maxScale: 1 },
       { kind: 'rock', count: 60, minScale: 0.5, maxScale: 1.3 },
       { kind: 'log', count: 15, minScale: 0.7, maxScale: 1.2 },
+      { kind: 'pebble', count: 80, minScale: 1, maxScale: 3 },
     ],
+    rockTint: '#b8b0a0',
     population: 10,
     spawns: [
       { creatureId: 'little_penguin', weight: 6 },

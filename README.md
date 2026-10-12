@@ -102,6 +102,16 @@ Known limits: generated models are static (no walk cycle), and TRELLIS drops thi
 
 **Check the model names first.** Replicate's catalogue changes often. Model refs and input keys are settings in `manifest.json` (`image_model`, `model_3d.ref`, `model_3d.image_key`, `model_3d.input`).
 
+## Scenery (Stylized Nature MegaKit)
+
+Trees, rocks, ferns, grass, flowers and mushrooms come from Quaternius's [Stylized Nature MegaKit](https://quaternius.com) (CC0, no attribution required). The 39 models the game uses are bundled into one file, `public/assets/nature/nature.glb` (about 1.3 MB, sharing 12 WebP textures), by:
+
+```sh
+node scripts/nature/build.mjs <folder with the pack's .glb files>
+```
+
+The pick list (model id → pack file) is at the top of that script, and `src/components/NatureKit.tsx` maps prop kinds to model ids (`KIT`) with a target height for each. Props spread across a kind's variants, so the forest mixes five pines and five broadleaf trees. Kinds not in the kit (cactus, mesa, termite mound, ghost gum, peak, log) keep their procedural shapes, and those shapes also stand in while the scenery file loads. Each biome can tint the grey kit rocks with `rockTint` in `biomes.ts`, which turns them into red sandstone in the canyon and outback.
+
 ## Deploying (GitHub Pages)
 
 `.github/workflows/deploy.yml` runs the tests, builds and publishes `dist/` on every push to `main`. In the repo, open **Settings → Pages** and set **Source** to **GitHub Actions**. Production builds use the base path `/zooexplorer/` (see `vite.config.ts`). Change it there if you rename the repo or use a custom domain.
