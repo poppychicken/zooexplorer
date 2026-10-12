@@ -68,30 +68,39 @@ Debugging: `window.__zoo` in the browser console exposes the stores, the player 
 
 ## Generating creature assets (Replicate)
 
-The game ships with procedural placeholder creatures. The pipeline swaps in real models without any code changes: `CreatureModel` loads `public/assets/creatures/<id>.glb` whenever `index.json` lists it, and scales it to the creature's height automatically.
+All 20 creatures have generated models and journal icons in `public/assets/creatures/`, made with the pipeline below. `CreatureModel` loads `<id>.glb` whenever `index.json` lists it, scales it to the creature's height and sits it on the ground. Any creature without one falls back to its procedural placeholder.
 
 The script is meant to be run **locally**, never from the browser. Your token only ever lives in `.env`, which is git-ignored.
 
 ```sh
-python -m venv .venv && source .venv/bin/activate
-pip install -r scripts/generate_assets/requirements.txt
+pip install -r scripts/generate_assets/requirements.txt   # just Pillow
 cp .env.example .env                    # then add REPLICATE_API_TOKEN=r8_...
 python scripts/generate_assets/generate.py --dry-run
 python scripts/generate_assets/generate.py --only red_fox   # try one first
 python scripts/generate_assets/generate.py                  # everything still missing
+python scripts/generate_assets/generate.py --force --only barn_owl   # redo one you don't like
 ```
 
 For each creature in `scripts/generate_assets/manifest.json`, the script:
 
-1. makes a reference image with the image model (default `black-forest-labs/flux-schnell`), using one shared low-poly style prompt;
+1. makes a reference image with the image model (`black-forest-labs/flux-schnell`, about $0.003 each), using one shared low-poly style prompt;
 2. crops it into a 256 px journal icon;
-3. sends it to the image-to-3D model (default `firtoz/trellis`) for a GLB;
-4. if Node is installed, simplifies the GLB and compresses it with `gltf-transform` (meshopt + WebP textures);
+3. sends it to the image-to-3D model (`firtoz/trellis`, roughly 20 s each) for a GLB;
+4. if Node is installed, simplifies the GLB and compresses it with `gltf-transform` (meshopt + WebP textures, about 100 KB per creature);
 5. rewrites `index.json`.
 
 It's idempotent: creatures that already have assets are skipped unless you pass `--force`, and finished steps are cached in `scripts/generate_assets/.cache/` so a failed run can be retried cheaply. Commit the files it writes to `public/assets/creatures/`.
 
-**Check the model names first.** Replicate's catalogue changes often. Model refs and input keys are settings in `manifest.json` (`image_model`, `model_3d.ref`, `model_3d.image_key`, `model_3d.input`), so you can switch to, say, TRELLIS.2 or Hunyuan3D by editing that file.
+It talks to Replicate's HTTP API directly (no SDK), honours `HTTPS_PROXY`, and retries when Replicate throttles you (accounts with under $5 credit are limited to about 6 predictions a minute) or a connection drops. The image model occasionally flags a harmless prompt as NSFW; just run it again.
+
+Per-creature settings in the manifest:
+
+- `"yaw": -90` turns a model that came out facing the wrong way (degrees about the vertical axis; creatures walk towards +Z). It's written into `index.json` and applied in the game.
+- `"model_3d": {...}` swaps in a different image-to-3D model for that creature only, with the same shape as the top-level `model_3d`.
+
+Known limits: generated models are static (no walk cycle), and TRELLIS drops thin structures, so the Moss-Antler Stag has lost its antlers. Hunyuan3D 2.1 (`ndreca/hunyuan3d-2.1`) did worse on it. TRELLIS.2 or Rodin are the next things to try.
+
+**Check the model names first.** Replicate's catalogue changes often. Model refs and input keys are settings in `manifest.json` (`image_model`, `model_3d.ref`, `model_3d.image_key`, `model_3d.input`).
 
 ## Deploying (GitHub Pages)
 

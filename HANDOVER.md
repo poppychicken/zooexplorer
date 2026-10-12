@@ -40,7 +40,7 @@ A **first-person explorer game playable in the browser**.
 | Language | **TypeScript** throughout. |
 | Physics | **Use `@react-three/rapier`** for collisions and the net throw. |
 | Hosting | **GitHub Pages via GitHub Actions**: add a deploy workflow, Vite `base: '/zooexplorer/'`. |
-| Asset script | **Python** (`scripts/generate_assets/generate.py` + `manifest.json`, using the `replicate` Python client). The user runs it **locally** with their own token. The cloud session never calls Replicate, and the game uses procedural placeholders until GLBs are committed. |
+| Asset script | **Python** (`scripts/generate_assets/generate.py` + `manifest.json`, calling Replicate's HTTP API directly). The token stays in `.env` or the environment, never in frontend code. Originally local-only; the user later gave the cloud environment Replicate access, and all 20 creature GLBs and icons were generated (FLUX schnell → TRELLIS) and committed. |
 | Pace | Build the **full vertical slice**, committing and pushing after each milestone: (1) scaffold + FPS controller in the zoo hub, (2) forest biome + capture loop, (3) shop + economy, (4) canyon + legendary mini-game. |
 
 ## 3. Starting fresh — setup checklist
