@@ -9,11 +9,12 @@ import { SHOP_ITEMS, SHOP_ITEM_BY_ID, NETS } from '../game/data/shop'
 import { formatMoney } from '../game/systems/economy'
 import { Journal } from './Journal'
 import { CaptureMiniGame } from '../components/CaptureMiniGame'
+import { RegionMap, type Destination } from './RegionMap'
 
-function Panel({ title, children, onClose, wide }: { title: string; children: ReactNode; onClose?: () => void; wide?: boolean }) {
+function Panel({ title, children, onClose, wide, className = '' }: { title: string; children: ReactNode; onClose?: () => void; wide?: boolean; className?: string }) {
   return (
     <div className="overlay">
-      <div className={`panel ${wide ? 'wide' : ''}`}>
+      <div className={`panel ${wide ? 'wide' : ''} ${className}`}>
         <div className="panel-head">
           <h2>{title}</h2>
           {onClose && (
@@ -36,6 +37,17 @@ function backToEntrance() {
   // Face down the hill, as when you first arrive.
   player.teleport(SPAWN[0], SPAWN[1], Math.PI)
   player.pitch = 0
+}
+
+/** Travel straight to a region picked on the map. */
+function travel(to: Destination) {
+  unlockAudio()
+  useSession.setState({ started: true })
+  const s = useSession.getState()
+  if (to !== 'hub') s.goTo({ kind: 'biome', biome: to })
+  else if (s.location.kind === 'hub') backToEntrance()
+  else s.goTo({ kind: 'hub' })
+  requestLock()
 }
 
 const resume = () => {
@@ -72,7 +84,8 @@ function Pause() {
   const resetSave = useGame((s) => s.resetSave)
   const firstVisit = useSession((s) => !s.started)
   return (
-    <Panel title={firstVisit ? 'Zoo Explorer' : 'Paused'}>
+    <Panel title={firstVisit ? 'Zoo Explorer' : 'Paused'} className="with-map">
+      <RegionMap onTravel={travel} />
       {firstVisit && (
         <p className="lead">
           Your zoo is empty. Head down the hill to the ferry wharf and set out on an expedition, track down creatures, lure them with bait and net them. Every species you bring
