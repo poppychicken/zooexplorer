@@ -58,6 +58,12 @@ export function Player({ spawn, yaw = 0 }: { spawn: [number, number, number]; ya
   useFrame(() => {
     const rb = body.current
     if (!rb) return
+    if (player.arrival) {
+      // Applied on the first frame, once the scene has set up its ground.
+      const { x, z, yaw } = player.arrival
+      player.arrival = null
+      player.teleport(x, z, yaw)
+    }
     const session = useSession.getState()
     const active = session.locked && !session.modal
 

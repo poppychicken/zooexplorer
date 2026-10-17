@@ -13,6 +13,8 @@ export const player = {
   pitch: 0,
   /** Set by the active Player; moves the physics body. */
   teleport: (_x: number, _z: number, _yaw?: number) => {},
+  /** Where to put the player once the next scene is ready (e.g. a spot picked on the zoo map). */
+  arrival: null as { x: number; z: number; yaw: number } | null,
 }
 
 /** Ground height lookup for the current scene; the hillside zoo hub replaces the flat default. */
