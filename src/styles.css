@@ -384,87 +384,305 @@ button.small {
   text-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
 }
 
-/* --- Region map (pause menu) ------------------------------------------ */
+/* --- Maps (pause menu) ------------------------------------------------ */
 
 .panel.with-map {
-  width: min(640px, 100%);
+  width: min(780px, 100%);
 }
-.region-map {
+.map-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.map-tabs {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.map-tabs button {
+  padding: 0.35em 0.9em;
+  border-radius: 99px;
+  font-size: 14px;
+  background: rgba(255, 255, 255, 0.06);
+}
+.map-tabs button.active {
+  background: var(--accent);
+  color: #241a08;
+  border-color: var(--accent);
+}
+.map-hint {
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--muted);
+}
+.chart,
+.zoo-map {
   width: 100%;
   height: auto;
   display: block;
   border-radius: 10px;
-  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.35), inset 0 0 40px rgba(0, 0, 0, 0.25);
   user-select: none;
+  font-family: Georgia, 'Times New Roman', serif;
 }
-.map-route {
+
+/* Expedition chart */
+.chart-grid {
+  stroke: rgba(255, 255, 255, 0.07);
+  stroke-width: 1;
+}
+.chart-coast {
+  stroke: #f1e2b6;
+  stroke-width: 2.5;
+}
+.chart-lane {
   fill: none;
-  stroke: #7a6a48;
-  stroke-width: 1.6;
-  stroke-dasharray: 3 5;
-  opacity: 0.7;
+  stroke: rgba(255, 255, 255, 0.55);
+  stroke-width: 2;
+  stroke-dasharray: 6 6;
+  stroke-linecap: round;
 }
-.map-region {
+.chart-lane.locked {
+  stroke: rgba(255, 255, 255, 0.2);
+}
+.chart-lane.active {
+  stroke: #fff6d8;
+  stroke-width: 3;
+  animation: chart-sail 1s linear infinite;
+}
+@keyframes chart-sail {
+  to {
+    stroke-dashoffset: -12;
+  }
+}
+.chart-region {
   cursor: pointer;
   outline: none;
 }
-.map-region .map-blob {
-  stroke: rgba(40, 30, 15, 0.55);
-  stroke-width: 1.5;
-  transition: filter 0.15s, stroke-width 0.15s;
+.chart-region .chart-coast {
+  transition: stroke 0.15s, stroke-width 0.15s;
 }
-.map-region:hover .map-blob,
-.map-region:focus-visible .map-blob {
-  stroke: #fff6d8;
-  stroke-width: 3;
-  filter: brightness(1.12);
+.chart-region.hover .chart-coast,
+.chart-region:focus-visible .chart-coast {
+  stroke: #fff9e6;
+  stroke-width: 4;
 }
-.map-region.here {
+.chart-region.here {
   cursor: default;
 }
-.map-region.here .map-blob {
-  stroke: #fff6d8;
+.chart-region.locked {
+  cursor: not-allowed;
+}
+.chart-region.locked.hover .chart-coast {
+  stroke: #f1e2b6;
   stroke-width: 2.5;
 }
-.map-region.locked {
-  cursor: not-allowed;
-  opacity: 0.75;
+.chart-banner path,
+.chart-banner rect {
+  fill: #f3e6c4;
+  stroke: #7a5a30;
+  stroke-width: 1.2;
+  filter: drop-shadow(0 1px 1.5px rgba(0, 0, 0, 0.35));
 }
-.map-region.locked:hover .map-blob {
-  stroke: rgba(40, 30, 15, 0.55);
-  stroke-width: 1.5;
-  filter: none;
-}
-.map-label,
-.map-detail {
+.chart-banner text {
   text-anchor: middle;
+  font-size: 12px;
+  font-weight: 700;
+  fill: #3b2a14;
   pointer-events: none;
+}
+.chart-banner .chart-sub {
+  font-size: 10.5px;
+  font-weight: 700;
+  fill: #fffaf0;
   paint-order: stroke;
-  stroke: rgba(30, 24, 12, 0.85);
+  stroke: rgba(20, 30, 40, 0.85);
   stroke-width: 3px;
   stroke-linejoin: round;
+  font-family: system-ui, sans-serif;
 }
-.map-label {
-  font-size: 13px;
-  font-weight: 800;
-  fill: #fffaf0;
+.chart-banner .chart-sub.req {
+  fill: #ffd79a;
 }
-.map-detail {
-  font-size: 10.5px;
-  font-weight: 600;
-  fill: #f1e6c8;
+.chart-region.hover .chart-banner path {
+  fill: #fff4d6;
 }
-.map-detail.req {
-  fill: #ffcf8a;
+.chart-lock circle {
+  fill: #f3e6c4;
+  stroke: #7a5a30;
+  stroke-width: 1.2;
 }
-.map-pin {
+.chart-pin,
+.chart-ferry {
   pointer-events: none;
 }
-.map-compass {
-  text-anchor: middle;
+.chart-compass text {
   font-size: 10px;
+  font-weight: 700;
+  fill: #f3e6c4;
+}
+.chart-cartouche rect {
+  fill: rgba(243, 230, 196, 0.92);
+  stroke: #7a5a30;
+  stroke-width: 1.2;
+}
+.chart-cartouche text {
+  text-anchor: middle;
+  font-size: 15px;
   font-style: italic;
-  fill: #2c4a5e;
+  font-weight: 700;
+  fill: #3b2a14;
+}
+.chart-cartouche .chart-cartouche-sub {
+  font-size: 9.5px;
+  font-weight: 400;
+}
+
+/* Zoo map (drawn in world metres) */
+.zoo-path-edge {
+  stroke: #9c8a64;
+  stroke-width: 4.2;
+  stroke-linecap: round;
+}
+.zoo-path {
+  stroke: #eadfc0;
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+.zoo-plaza {
+  fill: #eadfc0;
+  stroke: #9c8a64;
+  stroke-width: 0.6;
+}
+.zoo-cable {
+  stroke: #3a3a3a;
+  stroke-width: 0.5;
+  stroke-dasharray: 2 1.2;
+}
+.zoo-cable-label {
+  font-size: 3px;
+  font-style: italic;
+  fill: #2a2a2a;
+}
+.zoo-station {
+  fill: #2e3a46;
+  stroke: #fff;
+  stroke-width: 0.4;
+}
+.zoo-precinct {
+  cursor: pointer;
+  outline: none;
+}
+.zoo-terrace {
+  fill: rgba(255, 255, 255, 0.06);
+  stroke: rgba(60, 40, 20, 0.55);
+  stroke-width: 0.5;
+  stroke-dasharray: 1.4 1;
+}
+.zoo-precinct.hover .zoo-terrace,
+.zoo-precinct:focus-visible .zoo-terrace {
+  fill: rgba(255, 246, 216, 0.22);
+  stroke: #fff6d8;
+  stroke-width: 0.9;
+  stroke-dasharray: none;
+}
+.zoo-plot {
+  fill: color-mix(in srgb, var(--plot) 55%, transparent);
+  stroke: #5a3c24;
+  stroke-width: 0.5;
+}
+.zoo-plot.open {
+  fill: color-mix(in srgb, var(--plot) 90%, white 10%);
+  stroke-width: 0.7;
+}
+.zoo-label text,
+.zoo-water-label {
+  text-anchor: middle;
+}
+.zoo-label text,
+.zoo-poi-label,
+.zoo-water-label {
+  paint-order: stroke;
+  stroke-linejoin: round;
+  pointer-events: none;
+}
+.zoo-label text {
+  font-size: 3.6px;
+  font-weight: 700;
+  fill: #fffaf0;
+  stroke: rgba(30, 24, 12, 0.85);
+  stroke-width: 0.9px;
+}
+.zoo-label .zoo-sub {
+  font-size: 2.7px;
+  font-family: system-ui, sans-serif;
+  fill: #f1e6c8;
+}
+.zoo-poi {
+  cursor: pointer;
+  outline: none;
+}
+.zoo-poi-badge {
+  fill: #b5502f;
+  stroke: #fff;
+  stroke-width: 0.6;
+}
+.zoo-poi.hover .zoo-poi-badge,
+.zoo-poi:focus-visible .zoo-poi-badge {
+  fill: #e2703f;
+  stroke-width: 0.9;
+}
+.zoo-poi-label {
+  font-size: 2.8px;
+  font-weight: 700;
+  fill: #fff;
+  stroke: rgba(30, 24, 12, 0.85);
+  stroke-width: 0.8px;
+  font-family: system-ui, sans-serif;
+}
+.zoo-water-label {
+  font-size: 4px;
+  font-style: italic;
+  fill: rgba(255, 255, 255, 0.85);
+  stroke: rgba(20, 60, 90, 0.5);
+  stroke-width: 0.6px;
+  letter-spacing: 0.6px;
+}
+.zoo-you {
+  pointer-events: none;
+}
+.zoo-you path {
+  fill: #e2483a;
+  stroke: #fff;
+  stroke-width: 0.5;
+}
+.zoo-you-ring {
+  fill: rgba(226, 72, 58, 0.25);
+  stroke: #fff;
+  stroke-width: 0.4;
+}
+.zoo-north circle {
+  fill: rgba(243, 230, 196, 0.9);
+  stroke: #7a5a30;
+  stroke-width: 0.4;
+}
+.zoo-north path {
+  fill: #c0392b;
+}
+.zoo-north text,
+.zoo-scale text {
+  text-anchor: middle;
+  font-size: 3px;
+  font-weight: 700;
+  fill: #fff;
+  paint-order: stroke;
+  stroke: rgba(0, 0, 0, 0.6);
+  stroke-width: 0.6px;
+}
+.zoo-scale line {
+  stroke: #fff;
+  stroke-width: 0.6;
 }
 
 /* --- Journal --------------------------------------------------------- */

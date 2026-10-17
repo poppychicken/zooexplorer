@@ -27,10 +27,10 @@ import {
   SHOP,
   SPAWN,
   hubHeight,
-  isOpenGround,
   padHeight,
   precinctHeight,
   type Precinct,
+  bushland,
 } from './hub/layout'
 
 const PLOT = PLOT_SIZE
@@ -466,37 +466,7 @@ function ZooVisitors() {
 
 /** Bushland on the slopes between precincts, with a dense tree line beyond the walls. */
 function Bushland() {
-  const props = useMemo<PlacedProp[]>(() => {
-    const rng = mulberry32(99)
-    const out: PlacedProp[] = []
-    let tries = 0
-    while (out.length < 170 && tries++ < 4000) {
-      const x = range(rng, BOUNDS.minX, BOUNDS.maxX)
-      const z = range(rng, BOUNDS.minZ, BOUNDS.maxZ)
-      if (!isOpenGround(x, z)) continue
-      const r = rng()
-      out.push({ kind: r < 0.45 ? 'oak' : r < 0.7 ? 'pine' : 'bush', x, z, y: hubHeight(x, z) - 0.05, scale: range(rng, 0.7, 1.3), rot: rng() * 6.28, tint: rng() - 0.5 })
-    }
-    // Ferns, grass and wildflowers under the trees.
-    tries = 0
-    let cover = 0
-    while (cover < 260 && tries++ < 6000) {
-      const x = range(rng, BOUNDS.minX, BOUNDS.maxX)
-      const z = range(rng, BOUNDS.minZ, BOUNDS.maxZ)
-      if (!isOpenGround(x, z)) continue
-      const r = rng()
-      out.push({ kind: r < 0.4 ? 'grass' : r < 0.7 ? 'fern' : r < 0.92 ? 'flowers' : 'rock', x, z, y: hubHeight(x, z), scale: range(rng, 0.7, 1.3), rot: rng() * 6.28, tint: rng() - 0.5 })
-      cover++
-    }
-    // Tree line beyond the north and east walls (the harbour bounds the south and west).
-    for (let i = 0; i < 90; i++) {
-      const north = rng() < 0.55
-      const x = north ? range(rng, BOUNDS.minX - 10, BOUNDS.maxX + 12) : BOUNDS.maxX + range(rng, 2, 14)
-      const z = north ? BOUNDS.minZ - range(rng, 2, 14) : range(rng, BOUNDS.minZ - 10, BOUNDS.maxZ)
-      out.push({ kind: rng() < 0.5 ? 'pine' : 'oak', x, z, y: hubHeight(x, z) - 0.05, scale: range(rng, 1, 1.6), rot: rng() * 6.28, tint: rng() - 0.5 })
-    }
-    return out
-  }, [])
+  const props = useMemo(() => bushland(), [])
   return <PropField props={props} />
 }
 

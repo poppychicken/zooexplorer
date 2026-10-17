@@ -1,6 +1,5 @@
 import type { ReactNode } from 'react'
 import { requestLock } from '../App'
-import { player } from '../game/systems/world'
 import { SPAWN } from '../scenes/hub/layout'
 import { playUi, unlockAudio } from '../game/systems/audio'
 import { useGame, useSession } from '../game/state/store'
@@ -9,7 +8,8 @@ import { SHOP_ITEMS, SHOP_ITEM_BY_ID, NETS } from '../game/data/shop'
 import { formatMoney } from '../game/systems/economy'
 import { Journal } from './Journal'
 import { CaptureMiniGame } from '../components/CaptureMiniGame'
-import { RegionMap, type Destination } from './RegionMap'
+import { MapPanel } from './map/MapPanel'
+import { goToZooSpot } from './map/travel'
 
 function Panel({ title, children, onClose, wide, className = '' }: { title: string; children: ReactNode; onClose?: () => void; wide?: boolean; className?: string }) {
   return (
@@ -29,26 +29,8 @@ function Panel({ title, children, onClose, wide, className = '' }: { title: stri
   )
 }
 
-/** Hop back to the Main Entrance from anywhere in the zoo, getting out of the buggy first. */
-function backToEntrance() {
-  const s = useSession.getState()
-  if (s.driving) s.setDriving(false)
-  s.closeModal()
-  // Face down the hill, as when you first arrive.
-  player.teleport(SPAWN[0], SPAWN[1], Math.PI)
-  player.pitch = 0
-}
-
-/** Travel straight to a region picked on the map. */
-function travel(to: Destination) {
-  unlockAudio()
-  useSession.setState({ started: true })
-  const s = useSession.getState()
-  if (to !== 'hub') s.goTo({ kind: 'biome', biome: to })
-  else if (s.location.kind === 'hub') backToEntrance()
-  else s.goTo({ kind: 'hub' })
-  requestLock()
-}
+/** Hop back to the Main Entrance, facing down the hill as when you first arrive. */
+const backToEntrance = () => goToZooSpot(SPAWN[0], SPAWN[1], Math.PI)
 
 const resume = () => {
   unlockAudio()
@@ -85,7 +67,7 @@ function Pause() {
   const firstVisit = useSession((s) => !s.started)
   return (
     <Panel title={firstVisit ? 'Zoo Explorer' : 'Paused'} className="with-map">
-      <RegionMap onTravel={travel} />
+      <MapPanel />
       {firstVisit && (
         <p className="lead">
           Your zoo is empty. Head down the hill to the ferry wharf and set out on an expedition, track down creatures, lure them with bait and net them. Every species you bring
@@ -98,13 +80,7 @@ function Pause() {
           {firstVisit ? 'Start exploring' : 'Resume'}
         </button>
         {!firstVisit && (
-          <button
-            onClick={() => {
-              if (location.kind === 'biome') goTo({ kind: 'hub' })
-              else backToEntrance()
-              requestLock()
-            }}
-          >
+          <button onClick={backToEntrance}>
             {location.kind === 'biome' ? 'Return to zoo entrance' : 'Back to entrance'}
           </button>
         )}
